@@ -111,3 +111,8 @@ DevBox now uses a visual system inspired by the supplied Leon reference:
 - Workspace modal
 - Category filters
 - Local-first persistence
+
+
+## Phase 11 — Database & Code Generation
+
+Added SQL Workbench and JSON → TypeScript generator with browser-first processing.
