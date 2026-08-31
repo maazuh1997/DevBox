@@ -27,10 +27,14 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Apply routing fix to build
+        run: python3 scripts/professional_route_patch.py
       - name: Build
         run: npm run build
       - name: Enable GitHub Pages SPA fallback
         run: cp dist/index.html dist/404.html
+      - name: Verify Pages artifact
+        run: test -s dist/index.html && test -s dist/404.html
       - name: Setup Pages
         uses: actions/configure-pages@v5
       - name: Upload artifact
