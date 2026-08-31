@@ -322,7 +322,7 @@ function setMeta(toolId){
 function getToolFromPath(){
   const base="/DevBox/";
   let path=window.location.pathname;
-  if(path.startswith(base))path=path.slice(base.length);
+  if(path.startsWith(base))path=path.slice(base.length);
   else path=path.replace(/^\/+/,"");
   const parts=path.split("/").filter(Boolean);
   const slug=parts[0]==="tools"?parts[1]:null;
@@ -1017,6 +1017,11 @@ function App(){
   });
   useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";localStorage.setItem("devbox-theme",dark?"dark":"light")},[dark]);
   useEffect(()=>setMeta(active),[active]);
+  useEffect(()=>{
+    const onPop=()=>{setActive(getToolFromPath());setMobile(false);setQuery("");window.scrollTo({top:0,behavior:"auto"})};
+    window.addEventListener("popstate",onPop);
+    return()=>window.removeEventListener("popstate",onPop);
+  },[]);
   useEffect(()=>localStorage.setItem("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
   const addHistory=item=>setHistoryItems(prev=>[{...item,id:crypto.randomUUID(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
   useEffect(()=>{window.__devboxAddHistory=addHistory;return()=>delete window.__devboxAddHistory},[]);
@@ -1034,12 +1039,12 @@ function App(){
   const favoriteTools=tools.filter(t=>favorites.includes(t.id));
   function toggleFav(id){setFavorites(f=>f.includes(id)?f.filter(x=>x!==id):[...f,id])}
   function selectTool(id){
-    const scrollY=window.scrollY;
+    if(!tools.some(t=>t.id===id))return;
     setActive(id);
-    navigateTo(id,scrollY);
+    navigateTo(id);
     setMobile(false);
     setQuery("");
-    requestAnimationFrame(()=>window.scrollTo({top:scrollY,behavior:"auto"}));
+    window.scrollTo({top:0,behavior:"auto"});
   }
   const content={
     json:<JsonTool/>,jwt:<JwtTool/>,uuid:<UuidTool/>,base64:<Base64Tool/>,hash:<HashTool/>,regex:<RegexTool/>,timestamp:<TimestampTool/>,url:<UrlTool/>,qr:<QrTool/>,color:<ColorTool/>,http:<HttpTool/>,markdown:<MarkdownTool/>,sql:<SqlTool/>,
