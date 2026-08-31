@@ -5,23 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#ed403d" />
     <meta name="description" content="DevBox — fast, private, browser-based developer utilities." />
-    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="manifest" href="./manifest.webmanifest" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-    <link rel="canonical" href="/" />
+    <link rel="canonical" href="/DevBox/" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
-    <link rel="stylesheet" href="/professional-ui.css" />
     <title>DevBox — Developer Toolkit</title>
   </head>
   <body>
     <div id="root"></div>
-    <script type="module" src="/src/globe-shim.jsx"></script>
-    <script type="module" src="/src/main.jsx"></script>
-    <script>
-      if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js");
-    </script>
+    <script type="module" src="./src/globe-shim.jsx"></script>
+    <script type="module" src="./src/main.jsx"></script>
   </body>
 </html>
