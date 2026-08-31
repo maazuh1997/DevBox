@@ -320,11 +320,10 @@ function setMeta(toolId){
 }
 
 function getToolFromPath(){
+  const path=String(window.location.pathname||"");
   const base="/DevBox/";
-  let path=window.location.pathname;
-  if(path.startsWith(base))path=path.slice(base.length);
-  else path=path.replace(/^\/+/,"");
-  const parts=path.split("/").filter(Boolean);
+  const relative=path.indexOf(base)===0?path.slice(base.length):path.replace(/^\/+/,"");
+  const parts=relative.split("/").filter(Boolean);
   const slug=parts[0]==="tools"?parts[1]:null;
   return tools.some(t=>t.id===slug)?slug:null;
 }
