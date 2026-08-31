@@ -320,14 +320,18 @@ function setMeta(toolId){
 }
 
 function getToolFromPath(){
-  const slug=window.location.pathname.replace(/^\/+|\/+$/g,"");
-  const match=tools.find(t=>t.id===slug);
-  return match?.id||"json";
+  const base="/DevBox/";
+  let path=window.location.pathname;
+  if(path.startswith(base))path=path.slice(base.length);
+  else path=path.replace(/^\/+/,"");
+  const parts=path.split("/").filter(Boolean);
+  const slug=parts[0]==="tools"?parts[1]:null;
+  return tools.some(t=>t.id===slug)?slug:null;
 }
 
-function navigateTo(id,scrollY=window.scrollY){
-  const next=id==="json"?"/":`/${id}`;
-  window.history.pushState({devboxScrollY:scrollY}, "", next);
+function navigateTo(id){
+  const next=id?`/DevBox/tools/${id}`:"/DevBox/";
+  window.history.pushState({devboxTool:id||null},"",next);
   window.dispatchEvent(new PopStateEvent("popstate"));
 }
 
