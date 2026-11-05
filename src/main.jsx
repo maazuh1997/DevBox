@@ -1364,7 +1364,7 @@ function App(){
             return <div className="tool-group" key={cat}><div className="category">{cat}<span>{list.length}</span></div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
           })}
         </div>
-        <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Local-first by default</strong><span>Core utilities run in your browser.</span></div></div><span className="version">DevBox · 25 developer tools</span></div>
+        <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Local-first by default</strong><span>Core utilities run in your browser.</span></div></div><span className="version">DevBox · 28 developer tools</span></div>
       </aside>
       <main className="main">
         {view==="workspace"?<>
