@@ -55,11 +55,22 @@ async function copyText(text, setCopied){
 }
 
 function downloadText(name, text){
-  const blob = new Blob([text], {type:"text/plain"});
-  const url = URL.createObjectURL(blob);
+  let url;
   const a = document.createElement("a");
-  a.href=url; a.download=name; a.click();
-  URL.revokeObjectURL(url);
+  try{
+    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    url = URL.createObjectURL(blob);
+    a.href=url;
+    a.download=String(name||"download.txt").replace(/[\\r\\n\\0]/g,"_");
+    a.style.display="none";
+    document.body.appendChild(a);
+    a.click();
+  }catch{
+    // Downloads are best-effort in restricted browser contexts.
+  }finally{
+    a.remove();
+    if(url)URL.revokeObjectURL(url);
+  }
 }
 
 function uuid(){
