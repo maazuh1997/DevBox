@@ -426,7 +426,7 @@ const legacyToolAliases = {
 ,
   "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector", "webhook-sender":"webhook-sender", "api-mock-builder":"api-mock-builder"
 };
-function canonicalToolId(id){return legacyToolAliases[id]||null}
+function canonicalToolId(id){return legacyToolAliases[id]||(tools.some(tool=>tool.id===id)?id:null)}
 function appBasePath(){
   const configured=String(import.meta.env.BASE_URL||"/");
   return configured.endsWith("/")?configured:configured+"/";
@@ -1575,6 +1575,26 @@ class AppErrorBoundary extends React.Component{
   }
 }
 
+
+class ToolErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={error:null};}
+  static getDerivedStateFromError(error){return {error};}
+  componentDidUpdate(previousProps){
+    if(previousProps.resetKey!==this.props.resetKey&&this.state.error){
+      this.setState({error:null});
+    }
+  }
+  componentDidCatch(error,info){console.error("DevBox tool screen failure",error,info);}
+  render(){
+    if(this.state.error)return <section className="catalog-empty" role="alert">
+      <h2>This tool could not be opened</h2>
+      <p>{this.state.error?.message||"An unexpected error occurred while rendering this tool."}</p>
+      <button className="text-btn" onClick={this.props.onBack}>Return to all tools</button>
+    </section>;
+    return this.props.children;
+  }
+}
+
 function App(){
   const initialTool=getToolFromPath();
   const [active,setActive]=useState(initialTool||"json");
@@ -1686,7 +1706,7 @@ function App(){
         {view==="workspace"?<>
           <div className="breadcrumb"><button onClick={showCatalog}>All tools</button><ChevronRight size={14}/><span>{current.category}</span><ChevronRight size={14}/><strong>{current.name}</strong><button className="favorite-main" aria-label={favorites.includes(current.id)?"Remove favorite":"Add favorite"} title={favorites.includes(current.id)?"Remove favorite":"Add favorite"} onClick={()=>toggleFav(current.id)}>{favorites.includes(current.id)?<Star fill="currentColor" size={17}/>:<Star size={17}/>}</button></div>
           <div className="workspace-toolbar"><button className="back-to-tools" onClick={showCatalog}><ChevronRight size={15}/> All tools</button><span className="workspace-category">{current.category}</span></div>
-          <div className="workspace-view"><div className="content">{content}</div></div>
+          <div className="workspace-view"><ToolErrorBoundary key={active} resetKey={active} onBack={showCatalog}><div className="content">{content}</div></ToolErrorBoundary></div>
         </>:<>
           <section className="hero">
             <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> THE DEVELOPER WORKFLOW TOOLBOX</div><h1>What are you<br/><span>building today?</span></h1><p>Find the right utility, open it, and get straight to work. Simple tools for everyday developer tasks — all in one workspace.</p><div className="hero-meta"><span><Lock size={13}/> Local-first</span><span><ShieldCheck size={13}/> Privacy-minded</span><span><Zap size={13}/> Ready in seconds</span></div></div>
