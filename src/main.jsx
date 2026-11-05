@@ -238,10 +238,9 @@ function UrlTool(){
 
 function QrTool(){
   const [text,setText]=useState("https://devbox.local");
-  const qr=`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(text)}`;
-  return <ToolShell tool={tools[8]} value={qr}>
+  return <ToolShell tool={tools[8]} value={text}>
     <Editor label="CONTENT" value={text} onChange={setText} placeholder="Text or URL"/>
-    <div className="qr-area"><img src={qr} alt="Generated QR code"/><p>Preview uses a QR image service. Other DevBox tools remain fully client-side.</p></div>
+    <div className="qr-area"><div className="qr-placeholder"><QrCode size={42}/><strong>Private QR generation</strong><p>QR output is temporarily unavailable until an on-device encoder is integrated. Your content is not sent to a third-party service.</p></div></div>
   </ToolShell>
 }
 
@@ -271,7 +270,7 @@ function HttpTool(){
 function MarkdownTool(){
   const [input,setInput]=useState("# DevBox\n\nA **fast** developer toolkit.\n\n- Private\n- Browser-first\n- Free to use");
   function render(md){return md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`(.*?)`/g,"<code>$1</code>").replace(/^- (.*)$/gm,"<li>$1</li>").replace(/\n\n/g,"<br/><br/>").replace(/\n/g,"<br/>")}
-  return <ToolShell tool={tools[11]} value={input}><div className="split"><Editor label="MARKDOWN" value={input} onChange={setInput}/><Panel label="PREVIEW"><div className="markdown-preview" dangerouslySetInnerHTML={{__html:render(input)}}/></Panel></div></ToolShell>
+  return <ToolShell tool={tools[11]} value={input}><div className="split"><Editor label="MARKDOWN" value={input} onChange={setInput}/><Panel label="PREVIEW"><pre className="markdown-preview markdown-safe-preview">{input}</pre></Panel></div></ToolShell>
 }
 
 function SqlTool(){
