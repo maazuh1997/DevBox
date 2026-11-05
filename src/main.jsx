@@ -722,15 +722,61 @@ function SqlWorkbench(){
   const [tab,setTab]=useState("query");
   const [copied,setCopied]=useState(false);
 
-  const formatSql=value=>{
-    let out=value.replace(/\s+/g," ").trim();
-    out=out.replace(/\b(SELECT|FROM|LEFT JOIN|RIGHT JOIN|INNER JOIN|FULL JOIN|JOIN|WHERE|GROUP BY|HAVING|ORDER BY|LIMIT|OFFSET|UNION|VALUES|SET|RETURNING)\b/gi,"\n$1");
-    out=out.replace(/\b(AND|OR)\b/gi,"\n  $1");
-    out=out.replace(/,/g,",\n  ");
-    return out.replace(/\n{2,}/g,"\n").trim();
+  const rewriteSql=(value,pretty)=>{
+    const keywords=["LEFT JOIN","RIGHT JOIN","FULL JOIN","INNER JOIN","CROSS JOIN","GROUP BY","ORDER BY","UNION ALL","UNION","SELECT","FROM","WHERE","HAVING","LIMIT","OFFSET","JOIN","ON","INSERT INTO","VALUES","UPDATE","SET","DELETE FROM","RETURNING","CREATE TABLE","ALTER TABLE","DROP TABLE"];
+    let out="",i=0,quote=null,depth=0,pendingSpace=false;
+    const flushSpace=()=>{if(pendingSpace&&out&&!out.endsWith("\n")&&!out.endsWith(" "))out+=" ";pendingSpace=false};
+    while(i<value.length){
+      const ch=value[i],next=value[i+1];
+      if(quote){
+        out+=ch;i++;
+        if(ch==="\\"){if(i<value.length)out+=value[i++];continue}
+        if(ch===quote){
+          if(value[i]===quote&&value[i+1]===quote){out+=value[i+1];i+=2;continue}
+          quote=null;
+        }
+        continue;
+      }
+      if(ch==="'"||ch==='"'||ch.charCodeAt(0)===96||ch==="["){flushSpace();quote=ch==="["?"]":ch;out+=ch;i++;continue}
+      if(ch==="-"&&next==="-"){
+        pendingSpace=false;const eol=value.indexOf("\n",i+2),end=eol<0?value.length:eol;
+        if(pretty){if(out&&!out.endsWith("\n"))out+="\n";out+=value.slice(i,end)+"\n"}
+        else out+=" ";
+        i=eol<0?value.length:eol+1;continue;
+      }
+      if(ch==="/"&&next==="*"){
+        pendingSpace=false;const close=value.indexOf("*/",i+2),end=close<0?value.length:close+2;
+        if(pretty){if(out&&!out.endsWith("\n"))out+="\n";out+=value.slice(i,end)+"\n"}
+        else out+=" ";
+        i=end;continue;
+      }
+      if(/\s/.test(ch)){pendingSpace=true;i++;continue}
+      const previous=value[i-1]||"";
+      let matched=null;
+      if(pretty&&!/[A-Za-z0-9_$]/.test(previous)){
+        for(const keyword of keywords){
+          const candidate=value.slice(i).match(new RegExp("^"+keyword.replace(/\s+/g,"\\s+")+"(?![A-Za-z0-9_$])","i"));
+          if(candidate){matched=candidate[0];break}
+        }
+      }
+      if(matched){
+        pendingSpace=false;
+        if(out.trim()&&!out.endsWith("\n"))out+="\n";
+        out+=matched.toUpperCase();i+=matched.length;
+        if(["AND","OR"].includes(matched.toUpperCase()))out+=" ";
+        continue;
+      }
+      flushSpace();
+      if(ch==="(")depth++;
+      if(ch===")")depth=Math.max(0,depth-1);
+      out+=ch;i++;
+      if(pretty&&ch===","){if(depth===0)out+="\n  ";else out+=" "}
+      else if(pretty&&ch===";")out+="\n";
+    }
+    return pretty?out.replace(/[ \t]+\n/g,"\n").replace(/\n{3,}/g,"\n\n").trim():out.replace(/\s+/g," ").trim();
   };
-
-  const minifySql=value=>value.replace(/--.*$/gm,"").replace(/\s+/g," ").trim();
+  const formatSql=value=>rewriteSql(value,true);
+  const minifySql=value=>rewriteSql(value,false);
   const formatted=useMemo(()=>formatSql(query),[query]);
   const copy=()=>{
     navigator.clipboard?.writeText(formatted);
