@@ -1710,4 +1710,5 @@ function App(){
 }
 function SideItem({tool,active,onClick,fav,onFav}){return <div className={active?"side-item active":"side-item"}><button onClick={onClick}><tool.icon size={16}/><span>{tool.name}</span></button><button className="side-star" onClick={e=>{e.stopPropagation();onFav()}}>{fav?<Star size={13} fill="currentColor"/>:<Star size={13}/>}</button></div>}
 
-const rootElement=document.getElementById("root");\nif(rootElement)createRoot(rootElement).render(<AppErrorBoundary><App/></AppErrorBoundary>);
+const rootElement=document.getElementById("root");
+if(rootElement)createRoot(rootElement).render(<AppErrorBoundary><App/></AppErrorBoundary>);
