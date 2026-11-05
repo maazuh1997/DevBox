@@ -398,7 +398,7 @@ function canonicalToolId(id){return legacyToolAliases[id]||null}
 function getToolFromPath(){
   const path=String(window.location.pathname||"");
   const base="/DevBox/";
-  const relative=path.indexOf(base)===0?path.slice(base.length):path.replace(/^\\/+/, "");
+  const relative=path.indexOf(base)===0?path.slice(base.length):path.replace(/^\/+/, "");
   const parts=relative.split("/").filter(Boolean);
   const slug=parts[0]==="tools"?parts[1]:null;
   const canonical=canonicalToolId(slug);
