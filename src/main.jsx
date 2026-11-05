@@ -69,7 +69,7 @@ function downloadText(name, text){
     // Downloads are best-effort in restricted browser contexts.
   }finally{
     a.remove();
-    if(url)URL.revokeObjectURL(url);
+    // Keep the object URL alive until the browser has consumed the download.
   }
 }
 
