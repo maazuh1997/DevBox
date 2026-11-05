@@ -871,14 +871,18 @@ function JwtInspector(){
   const [token,setToken]=useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZib3giLCJyb2xlIjoiZGV2ZWxvcGVyIiwiZXhwIjo0MTAyNDQ0ODAwfQ.signature");
   const decodePart=value=>{
     try{
+      if(!value||!/^[A-Za-z0-9_-]+$/.test(value))return null;
       const normalized=value.replace(/-/g,"+").replace(/_/g,"/");
       const padded=normalized+"=".repeat((4-normalized.length%4)%4);
-      return JSON.parse(atob(padded));
+      const binary=atob(padded);
+      const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+      return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
     }catch(e){return null}
   };
-  const parts=token.split(".");
-  const header=decodePart(parts[0]);
-  const payload=decodePart(parts[1]);
+  const parts=token.trim().split(".");
+  const structurallyValid=parts.length===3&&parts.every(Boolean);
+  const header=structurallyValid?decodePart(parts[0]):null;
+  const payload=structurallyValid?decodePart(parts[1]):null;
   const exp=payload?.exp;
   const expiry=exp?new Date(exp*1000):null;
   const expired=expiry?expiry.getTime()<Date.now():false;
