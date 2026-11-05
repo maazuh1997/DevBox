@@ -9,6 +9,9 @@ import {
 import "./styles.css";
 
 const tools = [
+{id:"image-compressor",name:"Image Compressor",desc:"Resize and compress images to optimized JPEG, PNG or WebP files",icon:Palette,category:"App & Asset Studio"},
+{id:"svg-optimizer",name:"SVG Optimizer",desc:"Clean, minify and inspect SVG markup before shipping",icon:Braces,category:"App & Asset Studio"},
+{id:"sql-seed",name:"SQL Seed Data Generator",desc:"Generate realistic INSERT statements for local development and tests",icon:Database,category:"Data & Database"},
 {id:"app-icon-studio",name:"App Icon Studio",desc:"Create and export scalable application icon assets",icon:Palette,category:"App & Asset Studio"},
 {id:"jwt-secret",name:"JWT Secret Generator",desc:"Generate cryptographically secure signing secrets",icon:KeyRound,category:"Security & Config"},
 {id:"sample-files",name:"Sample Files Library",desc:"Download JSON, CSV, SQL, XML and config fixtures",icon:Download,category:"Developer Assets"},
@@ -1210,6 +1213,60 @@ function NginxBuilder(){
  const config=mode==="proxy"?"server {\n    listen 80;\n    server_name "+domain+";\n    location / {\n        proxy_pass http://127.0.0.1:"+port+";\n        proxy_http_version 1.1;\n        proxy_set_header Host $host;\n        proxy_set_header X-Real-IP $remote_addr;\n        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;\n        proxy_set_header X-Forwarded-Proto $scheme;\n    }\n}":"server {\n    listen 80;\n    server_name "+domain+";\n    root /var/www/"+domain+";\n    index index.html;\n    location / {\n        "+(spa?"try_files $uri $uri/ /index.html;":"try_files $uri $uri/ =404;")+"\n    }\n    location ~* \\.(css|js|png|jpg|jpeg|svg|woff2)$ {\n        expires 30d;\n        add_header Cache-Control \"public, immutable\";\n    }\n}";
  return <ToolShell title="Nginx Config Builder" subtitle="Create reverse-proxy or static-site server blocks with common production headers." value={config}><div className="generator-fields"><ActionField label="DOMAIN" value={domain} onChange={setDomain}/><label className="action-field"><span>SERVER TYPE</span><select value={mode} onChange={e=>setMode(e.target.value)}><option value="proxy">Node / API reverse proxy</option><option value="static">Static website</option></select></label>{mode==="proxy"&&<ActionField label="UPSTREAM PORT" value={port} onChange={setPort}/>}{mode==="static"&&<label className="check"><input type="checkbox" checked={spa} onChange={e=>setSpa(e.target.checked)}/> SPA fallback to index.html</label>}</div><Panel label="NGINX SERVER CONFIG"><pre className="code">{config}</pre></Panel><button className="primary" onClick={()=>downloadText("devbox-nginx.conf",config)}>Download config <Download size={14}/></button><p className="data-note">Validate with nginx -t and configure real TLS certificates, permissions, limits and upstream health checks before production.</p></ToolShell>
 }
+
+function ImageCompressor(){
+ const [file,setFile]=useState(null),[preview,setPreview]=useState(""),[quality,setQuality]=useState(0.78),[width,setWidth]=useState(""),[format,setFormat]=useState("image/webp"),[busy,setBusy]=useState(false),[result,setResult]=useState(null),[error,setError]=useState("");
+ useEffect(()=>{if(!file){setPreview("");return}const url=URL.createObjectURL(file);setPreview(url);return()=>URL.revokeObjectURL(url)},[file]);
+ async function compress(){if(!file)return;setBusy(true);setError("");setResult(null);try{
+ const image=await createImageBitmap(file),maxW=Number(width)>0?Number(width):image.width,scale=Math.min(1,maxW/image.width),w=Math.max(1,Math.round(image.width*scale)),h=Math.max(1,Math.round(image.height*scale)),canvas=document.createElement("canvas");canvas.width=w;canvas.height=h;
+ const ctx=canvas.getContext("2d");if(!ctx)throw Error("Canvas is unavailable.");if(format==="image/jpeg"){ctx.fillStyle="#fff";ctx.fillRect(0,0,w,h)}ctx.drawImage(image,0,0,w,h);
+ const blob=await new Promise((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(Error("Could not encode image.")),format,quality)),ext=format==="image/jpeg"?"jpg":format==="image/png"?"png":"webp";
+ setResult({blob,name:(file.name.replace(/\.[^.]+$/,"")||"image")+"-optimized."+ext,original:file.size,width:w,height:h});image.close?.();
+ }catch(e){setError(e.message||"Compression failed.")}finally{setBusy(false)}}
+ function save(){if(!result)return;const url=URL.createObjectURL(result.blob),a=document.createElement("a");a.href=url;a.download=result.name;a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}
+ return <ToolShell title="Image Compressor" subtitle="Compress and resize images directly in your browser. No upload service or account required.">
+ <div className="generator-fields"><label className="action-field">IMAGE FILE<input type="file" accept="image/png,image/jpeg,image/webp" onChange={e=>{setFile(e.target.files?.[0]||null);setResult(null);setError("")}}/></label>
+ <label className="action-field">OUTPUT FORMAT<select value={format} onChange={e=>{setFormat(e.target.value);setResult(null)}}><option value="image/webp">WebP (recommended)</option><option value="image/jpeg">JPEG</option><option value="image/png">PNG (lossless)</option></select></label>
+ <label className="action-field">MAXIMUM WIDTH (PX)<input type="number" min="1" max="12000" placeholder="Keep original width" value={width} onChange={e=>setWidth(e.target.value)}/></label>
+ <label className="action-field">QUALITY · {Math.round(quality*100)}%<input type="range" min="0.2" max="1" step="0.01" value={quality} onChange={e=>setQuality(Number(e.target.value))}/></label></div>
+ <div className="image-compress-preview">{preview?<img src={preview} alt="Selected image preview"/>:<div className="image-empty"><Palette size={28}/><strong>Choose an image to get started</strong><span>PNG, JPEG or WebP · processed locally</span></div>}</div>
+ <div className="advanced-footer"><span className="data-note">{file?file.name+" · "+(file.size/1024).toFixed(1)+" KB":"Select an image; large files depend on available device memory."}</span><button className="primary" disabled={!file||busy} onClick={compress}>{busy?"Compressing…":"Compress image"}</button></div>
+ {error&&<div className="alert error-box">{error}</div>}
+ {result&&<div className="image-result"><div><strong>{result.name}</strong><span>{result.width+" × "+result.height+"px · "+(result.blob.size/1024).toFixed(1)+" KB"}</span><small>{result.blob.size<=result.original?Math.round((1-result.blob.size/result.original)*100)+"% smaller":Math.round((result.blob.size/result.original-1)*100)+"% larger — try lower quality or WebP"}</small></div><button className="primary" onClick={save}><Download size={14}/> Download</button></div>}
+ <p className="data-note">Transparency is preserved in PNG/WebP. JPEG output uses a white background. Very large images may require substantial device memory.</p></ToolShell>
+}
+function SvgOptimizer(){
+ const [input,setInput]=useState(""),[output,setOutput]=useState(""),[error,setError]=useState(""),[stats,setStats]=useState(null);
+ function optimize(){setError("");setOutput("");setStats(null);try{
+ if(!input.trim())throw Error("Paste SVG markup or load an .svg file first.");const doc=new DOMParser().parseFromString(input,"image/svg+xml");if(doc.querySelector("parsererror"))throw Error("The SVG markup is not valid XML.");
+ const root=doc.documentElement;if(root.localName!=="svg")throw Error("The document root must be an SVG element.");
+ doc.querySelectorAll("script,foreignObject,metadata,title,desc").forEach(n=>n.remove());doc.querySelectorAll("*").forEach(el=>[...el.attributes].forEach(attr=>{if(/^on/i.test(attr.name)||/javascript\s*:/i.test(attr.value))el.removeAttribute(attr.name)}));
+ const walker=doc.createTreeWalker(root,NodeFilter.SHOW_COMMENT),comments=[];while(walker.nextNode())comments.push(walker.currentNode);comments.forEach(n=>n.remove());
+ let xml=new XMLSerializer().serializeToString(root).replace(/>\s+</g,"><").replace(/\s{2,}/g," ").trim();if(!/xmlns=/.test(xml))xml=xml.replace("<svg","<svg xmlns=\"http://www.w3.org/2000/svg\"");
+ setOutput(xml);setStats({before:new Blob([input]).size,after:new Blob([xml]).size});
+ }catch(e){setError(e.message)}}
+ function load(e){const file=e.target.files?.[0];if(!file)return;const reader=new FileReader();reader.onload=()=>setInput(String(reader.result));reader.readAsText(file)}
+ return <ToolShell title="SVG Optimizer" subtitle="Validate, clean and minify SVG markup with conservative browser-local cleanup." value={output}>
+ <div className="sample-toolbar" style={{padding:14}}><label className="file-btn">Open SVG<input type="file" accept=".svg,image/svg+xml" onChange={load}/></label><button className="primary" onClick={optimize}>Optimize SVG <Zap size={14}/></button></div>
+ <div className="split"><Editor label="SVG INPUT" value={input} onChange={setInput} placeholder="<svg xmlns=&quot;http://www.w3.org/2000/svg&quot;>…"/><Panel label="OPTIMIZED OUTPUT" status={stats?(stats.after/1024).toFixed(2)+" KB":"Waiting for input"} statusGood={!!stats}><pre className="code">{output||"Optimized SVG will appear here."}</pre></Panel></div>
+ {error&&<div className="alert error-box">{error}</div>}
+ {stats&&<div className="advanced-footer"><span className="data-note">{(stats.before/1024).toFixed(2)+" KB → "+(stats.after/1024).toFixed(2)+" KB · "+Math.round((1-stats.after/stats.before)*100)+"% size change"}</span><button className="primary" onClick={()=>downloadText("optimized.svg",output)}><Download size={14}/> Download SVG</button></div>}
+ <p className="data-note">Lightweight cleanup, not a full SVGO replacement. Removes scripts, foreignObject content, metadata and event-handler attributes; inspect output before production use.</p></ToolShell>
+}
+function SqlSeedGenerator(){
+ const [table,setTable]=useState("users"),[rows,setRows]=useState(10),[dialect,setDialect]=useState("postgres"),[seed,setSeed]=useState(42);
+ const names=["Avery Chen","Jordan Smith","Taylor Morgan","Riley Patel","Casey Brown","Morgan Lee","Jamie Wilson","Alex Rivera","Sam Khan","Drew Taylor","Robin Garcia","Cameron Ali"],emails=["avery","jordan","taylor","riley","casey","morgan","jamie","alex","sam","drew","robin","cameron"];
+ const valid=/^[A-Za-z_][A-Za-z0-9_]*$/.test(table),safeTable=valid?table:"users",q=dialect==="mysql"?String.fromCharCode(96):"\"",esc=v=>String(v).replace(/'/g,"''");
+ const tuples=Array.from({length:Math.min(500,Math.max(1,Number(rows)||1))},(_,i)=>{const n=(i+Math.abs(Number(seed)||0))%names.length,id=i+1,active=i%4!==0,created=new Date(Date.UTC(2025,0,1)+i*86400000).toISOString();return "("+id+", '"+esc(names[n])+"', '"+emails[n]+id+"@example.test', '"+(active?"active":"inactive")+"', '"+created+"')"});
+ const output="INSERT INTO "+q+safeTable+q+" ("+["id","name","email","status","created_at"].map(c=>q+c+q).join(", ")+") VALUES\n"+tuples.join(",\n")+";";
+ return <ToolShell title="SQL Seed Data Generator" subtitle="Create repeatable INSERT fixtures for local development, demos and automated tests." value={output}>
+ <div className="generator-fields"><label className="action-field">TABLE NAME<input value={table} onChange={e=>setTable(e.target.value)} placeholder="users"/></label><label className="action-field">SQL DIALECT<select value={dialect} onChange={e=>setDialect(e.target.value)}><option value="postgres">PostgreSQL</option><option value="mysql">MySQL / MariaDB</option></select></label><label className="action-field">ROW COUNT · MAX 500<input type="number" min="1" max="500" value={rows} onChange={e=>setRows(Math.min(500,Math.max(1,Number(e.target.value)||1)))}/></label><label className="action-field">SEED<input type="number" value={seed} onChange={e=>setSeed(Number(e.target.value)||0)}/></label></div>
+ {!valid&&<div className="alert error-box">Use a simple SQL identifier: letters, numbers and underscores; it must not start with a number.</div>}
+ <Panel label="SQL INSERT STATEMENTS"><pre className="code">{output}</pre></Panel>
+ <div className="advanced-footer"><span className="data-note">{tuples.length+" rows · deterministic sample records · example.test emails"}</span><button className="primary" disabled={!valid} onClick={()=>downloadText("seed-data.sql",output)}><Download size={14}/> Download SQL</button></div>
+ <p className="data-note">Fixed demo schema: id, name, email, status, created_at. Review column types and constraints against your actual database before running.</p></ToolShell>
+}
+
 function App(){
   const initialTool=getToolFromPath();
   const [active,setActive]=useState(initialTool||"json");
@@ -1274,7 +1331,7 @@ function App(){
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>}[active]||<AppIconStudio/>;
+  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">
