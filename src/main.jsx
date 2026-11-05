@@ -427,19 +427,32 @@ const legacyToolAliases = {
   "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector", "webhook-sender":"webhook-sender", "api-mock-builder":"api-mock-builder"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||null}
+function appBasePath(){
+  const configured=String(import.meta.env.BASE_URL||"/");
+  return configured.endsWith("/")?configured:configured+"/";
+}
 function getToolFromPath(){
-  const path=String(window.location.pathname||"");
-  const base="/DevBox/";
-  const relative=path.indexOf(base)===0?path.slice(base.length):path.replace(/^\/+/, "");
+  const pathname=String(window.location.pathname||"/");
+  const base=appBasePath();
+  let relative=pathname;
+  if(pathname===base.slice(0,-1)||pathname===base)relative="";
+  else if(pathname.startsWith(base))relative=pathname.slice(base.length);
+  else relative=pathname.replace(/^\/+/, "");
   const parts=relative.split("/").filter(Boolean);
-  const slug=parts[0]==="tools"?parts[1]:null;
+  if(parts.length===0)return null;
+  if(parts[0]!=="tools"||!parts[1])return null;
+  let slug;
+  try{slug=decodeURIComponent(parts[1]);}catch{return null;}
   const canonical=canonicalToolId(slug);
   return tools.some(t=>t.id===canonical)?canonical:null;
 }
 function navigateTo(id){
-  const next=id?`/DevBox/tools/${id}`:"/DevBox/";
-  window.history.pushState({devboxTool:id||null},"",next);
-  window.dispatchEvent(new PopStateEvent("popstate"));
+  const base=appBasePath();
+  const next=id?base+"tools/"+encodeURIComponent(id):base;
+  if(window.location.pathname!==next){
+    window.history.pushState({devboxTool:id||null},"",next);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+  }
 }
 
 function WorkspaceModal({items,onClose,onDelete,onClear,onLoad}){
@@ -1552,6 +1565,16 @@ function ApiMockBuilder(){
  </ToolShell>
 }
 
+class AppErrorBoundary extends React.Component{
+  constructor(props){super(props);this.state={error:null};}
+  static getDerivedStateFromError(error){return {error};}
+  componentDidCatch(error,info){console.error("DevBox render failure",error,info);}
+  render(){
+    if(this.state.error)return <main className="main"><section className="catalog-empty"><h2>DevBox could not open this screen</h2><p>{this.state.error?.message||"An unexpected rendering error occurred."}</p><button className="text-btn" onClick={()=>{this.setState({error:null});window.location.assign(appBasePath());}}>Return to all tools</button></section></main>;
+    return this.props.children;
+  }
+}
+
 function App(){
   const initialTool=getToolFromPath();
   const [active,setActive]=useState(initialTool||"json");
@@ -1687,4 +1710,5 @@ function App(){
 }
 function SideItem({tool,active,onClick,fav,onFav}){return <div className={active?"side-item active":"side-item"}><button onClick={onClick}><tool.icon size={16}/><span>{tool.name}</span></button><button className="side-star" onClick={e=>{e.stopPropagation();onFav()}}>{fav?<Star size={13} fill="currentColor"/>:<Star size={13}/>}</button></div>}
 
-createRoot(document.getElementById("root")).render(<App/>);
+const rootElement=document.getElementById("root");
+if(rootElement)createRoot(rootElement).render(<AppErrorBoundary><App/></AppErrorBoundary>);

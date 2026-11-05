@@ -1,4 +1,4 @@
-const CACHE_NAME = "devbox-shell-v3";
+const CACHE_NAME = "devbox-shell-v4";
 const scopeUrl = new URL(self.registration.scope);
 const SHELL_URLS = [scopeUrl.href, new URL("index.html", scopeUrl).href];
 
