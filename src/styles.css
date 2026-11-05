@@ -902,3 +902,24 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .generator-fields input[type=file]{height:auto;padding:8px}
 :root[data-theme=dark] .image-compress-preview{border-color:#30313d;background:#12141b}
 @media(max-width:600px){.image-result{align-items:flex-start;flex-direction:column}.image-result .primary{width:100%;justify-content:center}}
+
+
+/* Base64, identifier and URL utilities */
+.generator-fields .full-width{grid-column:1/-1}
+.base64-output{margin:0 16px 14px;border:1px solid var(--line,#ddd);border-radius:9px;padding:12px;display:grid;gap:10px}
+.base64-output .code{max-height:300px;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere}
+.base64-output .primary{justify-self:start}
+.uuid-list{margin:0 16px 14px;border:1px solid var(--line,#ddd);border-radius:9px;max-height:440px;overflow:auto}
+.uuid-row{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:9px 12px;border-bottom:1px solid var(--line,#eee)}
+.uuid-row:last-child{border-bottom:0}
+.uuid-row code{font-size:10px;overflow-wrap:anywhere;min-width:0}
+.url-parts-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:0 16px 14px}
+.url-part{min-width:0;border:1px solid var(--line,#ddd);border-radius:8px;padding:10px;display:grid;gap:6px}
+.url-part span{font-size:9px;color:var(--muted,#888);text-transform:uppercase;letter-spacing:.06em}
+.url-part code{font-size:10px;overflow-wrap:anywhere;color:var(--text,#222)}
+.url-query-list{padding:12px 14px}
+.url-query-row{display:grid;grid-template-columns:minmax(90px,.7fr) minmax(0,1.5fr) auto;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--line,#eee)}
+.url-query-row:last-child{border-bottom:0}
+.url-query-row code,.url-query-row span{font-size:10px;overflow-wrap:anywhere;min-width:0}
+.url-query-row .text-btn{white-space:nowrap}
+@media(max-width:600px){.url-parts-grid{grid-template-columns:1fr}.url-query-row{grid-template-columns:1fr;gap:5px}.url-query-row .text-btn{justify-self:start}.base64-output .primary{width:100%;justify-content:center}}
