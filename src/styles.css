@@ -1216,3 +1216,147 @@ button:disabled{opacity:.5;cursor:not-allowed;transform:none!important}
 @supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){
  .topbar,.sidebar,.tool-shell,.quick{background:var(--surface)}
 }
+
+
+/* DevBox UX refinement — readable contrast, predictable inner workspaces and accessible controls */
+:root{
+  color-scheme:light;
+  --text:#20243a;
+  --text-strong:#171b2d;
+  --muted:#626b80;
+  --muted-strong:#505a70;
+  --surface:#ffffff;
+  --surface-raised:#ffffff;
+  --surface-soft:#f4f6fb;
+  --paper:#f4f6fb;
+  --line:#dce2ed;
+  --accent-soft:rgba(101,88,217,.10);
+}
+:root[data-theme=dark]{
+  color-scheme:dark;
+  --text:#e8ecf6;
+  --text-strong:#f6f8ff;
+  --muted:#aeb8cb;
+  --muted-strong:#c4ccda;
+  --surface:#171d2a;
+  --surface-raised:#1d2535;
+  --surface-soft:#222c3e;
+  --paper:#111724;
+  --line:#354158;
+  --accent-soft:rgba(139,128,255,.16);
+}
+body,.app{color:var(--text);background:var(--paper)}
+/* Text hierarchy: replace low-contrast grey copy throughout all tool screens. */
+p,small,.hint,.security-note,.data-note,.catalog-subtitle,.tool-count,
+.section-kicker,.side-label,.category,.breadcrumb,.workspace-category,
+.version,.privacy span,.hero p,.hero-stats span,.seo-section p,
+.seo-points span,.tool-title p,.panel-head,.editor>span,
+.control-row label,.check,.hash-row span,.value-grid span,
+.qr-area p,.settings-row span,.search-results button small,
+.regex-results>div>span,.regex-results b,.claim span{
+  color:var(--muted);
+}
+h1,h2,h3,h4,strong,.tool-title h2,.section-heading h2,
+.discovery-heading h3,.settings-head h3,.settings-row strong,
+.hero-stats strong,.quick-copy strong,.search-results button strong{
+  color:var(--text-strong);
+}
+.hero h1,.hero h1 .outline-word{color:var(--text-strong)}
+.hero h1 .outline-word{-webkit-text-stroke-color:var(--text-strong)}
+.breadcrumb strong{color:var(--text-strong)}
+/* Tool workspaces and nested panels */
+.workspace-view,.content,.tool-shell,.tool-head,.editor,.panel,
+.cards .panel,.jwt-status div,.claims,.modal,.settings-modal,
+.seo-section,.trust-strip>div,.discovery-section{
+  color:var(--text);
+}
+.tool-shell{
+  background:var(--surface);
+  border-color:var(--line);
+  box-shadow:0 16px 42px rgba(24,35,65,.07);
+}
+:root[data-theme=dark] .tool-shell{box-shadow:0 16px 42px rgba(0,0,0,.24)}
+.tool-head,.editor,.panel,.cards .panel,.jwt-status div,.claims{
+  background:var(--surface);
+}
+.tool-head{border-color:var(--line)}
+.editor,.panel{min-width:0}
+.panel-head,.editor>span{color:var(--muted-strong);font-weight:750}
+.code,.result,.hash-row code,.claim span,.regex-results code,
+.markdown-preview,.markdown-preview p,.markdown-preview li{
+  color:var(--text);
+}
+.markdown-preview h1,.markdown-preview h2,.markdown-preview h3{color:var(--text-strong)}
+.markdown-preview a,.claim code,.text-btn,.favorite-main{color:var(--accent)}
+/* All native and custom form controls keep readable foregrounds in both themes. */
+input,textarea,select,button{font-family:inherit}
+input:not([type=checkbox]):not([type=radio]):not([type=range]):not([type=color]):not([type=file]),
+textarea,select,.top-search,.http-line input,.http-line select,
+.inline-inputs input,.control-row select,.color-work input,.cards input{
+  color:var(--text-strong);
+  background:var(--surface-raised);
+  border-color:var(--line);
+}
+input::placeholder,textarea::placeholder{color:var(--muted)!important;opacity:1}
+.editor textarea{color:var(--text-strong);caret-color:var(--accent)}
+button{color:inherit}
+.segmented button{color:var(--muted-strong)}
+.segmented button.active{color:var(--text-strong);background:var(--surface-raised)}
+.quick,.recent-tool,.category-pills button,.file-btn,.text-btn,
+.back-to-tools,.breadcrumb button,.home-btn,.side-item button:first-child{
+  color:var(--text);
+}
+.quick{background:var(--surface);border-color:var(--line)}
+.quick-copy small,.quick-copy em{color:var(--muted)}
+.quick:hover,.recent-tool:hover,.category-pills button:hover{
+  border-color:rgba(101,88,217,.48);background:var(--accent-soft)
+}
+.side-item.active,.side-item.active button:first-child{color:#fff}
+.privacy{background:var(--surface-soft);border-color:var(--line);color:var(--muted)}
+.privacy strong{color:var(--text-strong)}
+/* Secondary actions, badges, status and code surfaces */
+.local-badge,.workspace-category,.tool-count{color:var(--muted-strong)}
+.result,.value-grid div,.hash-row,.claim,.regex-results>div{
+  border-color:var(--line);
+}
+.result,.value-grid div{background:var(--surface-soft)}
+.value-grid strong,.hash-row code,.claim code{color:var(--text-strong)}
+.code{background:var(--surface-soft);border-radius:9px;padding:10px}
+.good,.good-text{color:#168455!important}
+.bad,.danger,.error{color:#c13f50!important}
+:root[data-theme=dark] .good,:root[data-theme=dark] .good-text{color:#58d69b!important}
+:root[data-theme=dark] .bad,:root[data-theme=dark] .danger,:root[data-theme=dark] .error{color:#ff8794!important}
+.error-box{color:#a82f42;background:rgba(209,63,82,.09);border-color:rgba(209,63,82,.22)}
+:root[data-theme=dark] .error-box{color:#ff9aa5;background:rgba(209,63,82,.15)}
+/* Search, overlays and dialog readability */
+.search-results,.modal,.settings-modal{
+  background:var(--surface-raised);border-color:var(--line);color:var(--text);
+}
+.search-empty,.catalog-empty{color:var(--muted)}
+.modal-backdrop{background:rgba(15,22,40,.52)}
+.settings-row{border-color:var(--line)}
+.settings-row strong{color:var(--text-strong)}
+/* Clear focus, hover, disabled and touch states */
+:focus-visible{outline:3px solid rgba(101,88,217,.58)!important;outline-offset:3px}
+button:disabled{opacity:.55}
+button:not(:disabled){-webkit-tap-highlight-color:transparent}
+button,.quick,.recent-tool,.tool-shell,.file-btn,.category-pills button{
+  transition:background-color .16s ease,border-color .16s ease,box-shadow .16s ease,transform .16s ease;
+}
+@media(max-width:760px){
+  .tool-shell{border-radius:16px}
+  .tool-head{gap:12px}
+  .tool-title{align-items:flex-start}
+  .tool-title h2{font-size:15px;line-height:1.35}
+  .tool-title p{display:block;font-size:11px;line-height:1.5}
+  .toolbar,.tool-controls,.control-row,.inline-inputs,.http-line{gap:9px;flex-wrap:wrap}
+  .toolbar>*{max-width:100%}
+  .primary,.wide{max-width:calc(100% - 28px)}
+  .editor textarea{min-height:180px;font-size:12px}
+  .panel{overflow-wrap:anywhere}
+  .settings-modal,.modal{width:calc(100vw - 28px);max-width:520px}
+}
+@media(prefers-contrast:more){
+  :root{--muted:#465168;--line:#aeb8ca}
+  :root[data-theme=dark]{--muted:#d0d7e5;--line:#68758c}
+}
