@@ -258,7 +258,27 @@ function HttpTool(){
   const [url,setUrl]=useState("https://jsonplaceholder.typicode.com/todos/1");
   const [method,setMethod]=useState("GET"); const [status,setStatus]=useState(""); const [body,setBody]=useState("");
   async function send(){
-    setStatus("Loading…"); try{const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:method==="GET"?undefined:body}); const t=await r.text();setStatus(`${r.status} ${r.statusText}\\n\\n${t}`)}catch(e){setStatus(`Request failed. Browser CORS policy may block this endpoint.\\n\\n${e.message}`)}
+    let parsed;
+    try {
+      parsed = new URL(url);
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
+      if (parsed.username || parsed.password) throw new Error("Do not put credentials in the URL. Use request headers instead.");
+    } catch (e) {
+      setStatus(e.message || "Enter a valid absolute HTTP(S) URL.");
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    setStatus("Loading…");
+    try {
+      const r = await fetch(parsed.href, {method, headers: {"Content-Type":"application/json"}, body: method === "GET" ? undefined : body, signal: controller.signal});
+      const t = await r.text();
+      setStatus(`${r.status} ${r.statusText}\\n\\n${t}`);
+    } catch(e) {
+      setStatus(e.name === "AbortError" ? "Request timed out after 20 seconds." : `Request failed. Browser CORS policy may block this endpoint.\\n\\n${e.message}`);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   return <ToolShell tool={tools[10]} value={status} onClear={()=>setStatus("")}>
     <div className="http-line"><select value={method} onChange={e=>setMethod(e.target.value)}>{["GET","POST","PUT","PATCH","DELETE"].map(x=><option key={x}>{x}</option>)}</select><input value={url} onChange={e=>setUrl(e.target.value)}/><button className="primary" onClick={send}>Send</button></div>
