@@ -591,12 +591,16 @@ function HttpClientWorkbench(){
   };
   const copy=v=>navigator.clipboard?.writeText(v);
   const curl=useMemo(()=>{
-    let s=`curl -X ${method} '${buildUrl()}'`;
-    headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H '${h.key}: ${h.value}'`);
-    if(auth==="Bearer"&&token)s+=` \\\n  -H 'Authorization: Bearer ${token}'`;
-    if(auth==="Basic"&&token)s+=` \\\n  -H 'Authorization: Basic ${btoa(token)}'`;
-    if(!["GET","HEAD"].includes(method)&&body)s+=` \\\n  --data '${body.replace(/'/g,"'\\\\''")}'`;
-    return s;
+    // POSIX single-quote escaping prevents shell metacharacters from changing command meaning.
+    const quote=value=>"'"+String(value).replace(/'/g,"'\\\\''")+"'";
+    try{
+      let s=`curl -X ${method} ${quote(buildUrl())}`;
+      headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H ${quote(`${h.key}: ${h.value}`)}`);
+      if(auth==="Bearer"&&token)s+=` \\\n  -H ${quote(`Authorization: Bearer ${token}`)}`;
+      if(auth==="Basic"&&token)s+=` \\\n  -H ${quote(`Authorization: Basic ${btoa(token)}`)}`;
+      if(!["GET","HEAD"].includes(method)&&body)s+=` \\\n  --data ${quote(body)}`;
+      return s;
+    }catch{return "Enter a valid HTTP(S) URL to generate cURL."}
   },[method,url,params,headers,auth,token,body]);
 
   return <ToolShell title="HTTP Client" subtitle="Build, send and inspect HTTP requests directly from your browser.">
