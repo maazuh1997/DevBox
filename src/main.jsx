@@ -812,55 +812,84 @@ function OpenApiWorkbench(){
   const parsed=useMemo(()=>{
     try{
       const doc=JSON.parse(source);
-      if(!doc||typeof doc!=="object")throw new Error("Specification must be an object.");
-      const paths=doc.paths&&typeof doc.paths==="object"?doc.paths:{};
-      const endpoints=[];
-      Object.entries(paths).forEach(([path,item])=>{
-        if(!item||typeof item!=="object")return;
-        ["get","post","put","patch","delete","head","options","trace"].forEach(method=>{
-          if(item[method])endpoints.push({method:method.toUpperCase(),path:path,operation:item[method]});
+      if(!doc||typeof doc!=="object"||Array.isArray(doc))throw new Error("Specification root must be a JSON object.");
+      if(typeof doc.openapi!=="string"||!/^3\.(0|1)\.\d+/.test(doc.openapi))throw new Error("Expected an OpenAPI 3.0.x or 3.1.x document. Swagger 2.0 and other formats are not supported.");
+      if(!doc.info||typeof doc.info!=="object"||typeof doc.info.title!=="string"||!doc.info.title.trim()||typeof doc.info.version!=="string"||!doc.info.version.trim())throw new Error("The info object must include non-empty title and version strings.");
+      if(!doc.paths||typeof doc.paths!=="object"||Array.isArray(doc.paths))throw new Error("The paths property must be an object.");
+      const methods=["get","post","put","patch","delete","head","options","trace"],endpoints=[],warnings=[];
+      Object.entries(doc.paths).forEach(([path,item])=>{
+        if(!path.startsWith("/"))warnings.push(path+": OpenAPI path keys should start with /.");
+        if(!item||typeof item!=="object"||Array.isArray(item)){warnings.push(path+": path item is not an object.");return}
+        methods.forEach(method=>{
+          if(!Object.prototype.hasOwnProperty.call(item,method))return;
+          const operation=item[method];
+          if(!operation||typeof operation!=="object"||Array.isArray(operation)){warnings.push(method.toUpperCase()+" "+path+": operation must be an object.");return}
+          if(!operation.responses||typeof operation.responses!=="object"||!Object.keys(operation.responses).length)warnings.push(method.toUpperCase()+" "+path+": no responses are defined.");
+          const placeholders=[...path.matchAll(/\{([^}]+)\}/g)].map(match=>match[1]);
+          const params=[...(Array.isArray(item.parameters)?item.parameters:[]),...(Array.isArray(operation.parameters)?operation.parameters:[])];
+          placeholders.forEach(name=>{
+            const found=params.some(param=>param&&param.in==="path"&&param.name===name&&param.required===true);
+            if(!found)warnings.push(method.toUpperCase()+" "+path+": path parameter {"+name+"} should be declared as required.");
+          });
+          endpoints.push({method:method.toUpperCase(),path,operation,pathItem:item});
         });
       });
-      return {ok:true,doc:doc,endpoints:endpoints};
-    }catch(e){return {ok:false,error:e.message,endpoints:[]}};
+      if(!endpoints.length)warnings.push("No supported HTTP operations were found under paths.");
+      if(Array.isArray(doc.servers))doc.servers.forEach((server,i)=>{if(!server||typeof server.url!=="string"||!server.url.trim())warnings.push("Server "+(i+1)+" has no URL.")});
+      return {ok:true,doc,endpoints,warnings};
+    }catch(e){return {ok:false,error:e.message,endpoints:[],warnings:[]}}
   },[source]);
 
-  const loadSample=()=>{setSource(sample);setError("")};
+  const loadSample=()=>{setSource(sample);setError("");setSelected(null)};
   const format=()=>{
-    try{setSource(JSON.stringify(JSON.parse(source),null,2));setError("")}
+    try{const doc=JSON.parse(source);setSource(JSON.stringify(doc,null,2));setError("")}
     catch(e){setError(e.message)}
   };
   const copyCurl=ep=>{
-    const server=parsed.doc.servers&&parsed.doc.servers[0]&&parsed.doc.servers[0].url?parsed.doc.servers[0].url:"https://api.example.com";
-    const clean=ep.path.replace(/\{[^}]+\}/g,"VALUE");
-    const curl=`curl -X ${ep.method} '${server.replace(/\/$/,"")+clean}'`;
-    navigator.clipboard?.writeText(curl);
+    try{
+      const server=(parsed.doc.servers?.[0]?.url||"https://api.example.com").replace(/\{([^}]+)\}/g,(match,key)=>{
+        const value=parsed.doc.servers?.[0]?.variables?.[key]?.default;
+        if(value===undefined)throw new Error("Server variable {"+key+"} has no default value.");
+        return encodeURIComponent(String(value));
+      });
+      const path=ep.path.replace(/\{([^}]+)\}/g,(_,key)=>"VALUE");
+      const url=new URL(server.replace(/\/+$/,"")+"/"+path.replace(/^\/+/,""));
+      if(!["http:","https:"].includes(url.protocol)||url.username||url.password)throw new Error("Only absolute HTTP(S) server URLs without embedded credentials can be exported.");
+      const quote=value=>"'"+String(value).replace(/'/g,"'\\''")+"'";
+      const curl="curl -X "+ep.method+" "+quote(url.toString());
+      if(!navigator.clipboard?.writeText)throw new Error("Clipboard access is unavailable. Copy the URL manually: "+url.toString());
+      navigator.clipboard.writeText(curl).catch(()=>setError("Could not access the clipboard. Please copy the generated request manually."));
+    }catch(e){setError(e.message||"Could not generate cURL for this endpoint.")}
   };
 
-  return <ToolShell title="OpenAPI Workbench" subtitle="Explore OpenAPI specifications, inspect endpoints and generate request snippets locally.">
+  return <ToolShell title="OpenAPI Workbench" subtitle="Inspect OpenAPI 3.0 and 3.1 JSON documents, validate common structure and generate safe cURL snippets locally.">
     <div className="openapi-workbench">
       <div className="openapi-toolbar">
-        <div><span className="local-badge">LOCAL PROCESSING</span>{parsed.ok&&<span className="api-summary">{parsed.doc.info?.title||"Untitled API"} · {parsed.doc.info?.version||"No version"} · {parsed.endpoints.length} endpoints</span>}</div>
+        <div><span className="local-badge">LOCAL PROCESSING</span>{parsed.ok&&<span className="api-summary">{parsed.doc.info.title} · v{parsed.doc.info.version} · {parsed.endpoints.length} endpoints</span>}</div>
         <div className="sql-actions"><button className="text-btn" onClick={loadSample}>Load sample</button><button className="text-btn" onClick={format}>Format JSON</button></div>
       </div>
+      {error&&<div className="inline-error" role="alert">{error}</div>}
+      {parsed.ok&&parsed.warnings.length>0&&<div className="header-warning" role="status"><strong>{parsed.warnings.length} validation note{parsed.warnings.length===1?"":"s"}</strong><span>{parsed.warnings.slice(0,8).join(" · ")}{parsed.warnings.length>8?" · More notes available in the source document":""}</span></div>}
       <div className="openapi-layout">
         <div className="openapi-spec">
-          <div className="editor-head"><span>OpenAPI JSON</span><span>{source.length} chars</span></div>
-          <textarea value={source} onChange={e=>setSource(e.target.value)} spellCheck="false"/>
-          {error&&<div className="inline-error">{error}</div>}
+          <div className="editor-head"><span>OpenAPI JSON</span><span>{source.length.toLocaleString()} chars</span></div>
+          <textarea value={source} onChange={e=>{setSource(e.target.value);setSelected(null);setError("")}} spellCheck="false"/>
+          {!parsed.ok&&<div className="inline-error" role="alert">{parsed.error}</div>}
         </div>
         <div className="openapi-explorer">
           <div className="sql-tabs"><button className={tab==="endpoints"?"active":""} onClick={()=>setTab("endpoints")}>Endpoints</button><button className={tab==="info"?"active":""} onClick={()=>setTab("info")}>Info</button><button className={tab==="servers"?"active":""} onClick={()=>setTab("servers")}>Servers</button></div>
-          {tab==="endpoints"&&<div className="endpoint-list">{parsed.endpoints.length?parsed.endpoints.map((ep,i)=><button className="endpoint-row" key={i} onClick={()=>setSelected(ep)}><span className={`method method-${ep.method.toLowerCase()}`}>{ep.method}</span><code>{ep.path}</code><span>{ep.operation.summary||"No summary"}</span></button>):<div className="history-empty">No endpoints found.</div>}</div>}
-          {tab==="info"&&<div className="api-info"><div><span>Title</span><strong>{parsed.doc?.info?.title||"—"}</strong></div><div><span>Version</span><strong>{parsed.doc?.info?.version||"—"}</strong></div><div><span>OpenAPI</span><strong>{parsed.doc?.openapi||"—"}</strong></div><div><span>Description</span><strong>{parsed.doc?.info?.description||"No description"}</strong></div></div>}
-          {tab==="servers"&&<div className="api-info">{(parsed.doc?.servers||[]).map((server,i)=><div key={i}><span>Server {i+1}</span><strong>{server.url}</strong><small>{server.description||""}</small></div>)}{!parsed.doc?.servers?.length&&<div className="history-empty">No servers defined.</div>}</div>}
-          {selected&&<div className="endpoint-detail"><div className="detail-head"><span className={`method method-${selected.method.toLowerCase()}`}>{selected.method}</span><code>{selected.path}</code><button className="icon-btn" onClick={()=>setSelected(null)}>×</button></div><p>{selected.operation.summary||"No summary provided."}</p><div className="detail-actions"><button className="text-btn" onClick={()=>copyCurl(selected)}>Copy cURL</button></div><pre>{JSON.stringify(selected.operation,null,2)}</pre></div>}
+          {!parsed.ok?<div className="history-empty">Fix the specification errors to explore endpoints.</div>:<>
+            {tab==="endpoints"&&<div className="endpoint-list">{parsed.endpoints.length?parsed.endpoints.map((ep,i)=><button className="endpoint-row" key={ep.method+"-"+ep.path+"-"+i} onClick={()=>setSelected(ep)}><span className={"method method-"+ep.method.toLowerCase()}>{ep.method}</span><code>{ep.path}</code><span>{ep.operation.summary||"No summary"}</span></button>):<div className="history-empty">No endpoints found.</div>}</div>}
+            {tab==="info"&&<div className="api-info"><div><span>Title</span><strong>{parsed.doc.info.title}</strong></div><div><span>Version</span><strong>{parsed.doc.info.version}</strong></div><div><span>OpenAPI</span><strong>{parsed.doc.openapi}</strong></div><div><span>Description</span><strong>{parsed.doc.info.description||"No description"}</strong></div><div><span>Tags</span><strong>{(parsed.doc.tags||[]).map(tag=>tag.name).filter(Boolean).join(", ")||"No tags defined"}</strong></div></div>}
+            {tab==="servers"&&<div className="api-info">{(parsed.doc.servers||[]).map((server,i)=><div key={i}><span>Server {i+1}</span><strong>{server.url}</strong><small>{server.description||""}</small></div>)}{!parsed.doc.servers?.length&&<div className="history-empty">No servers defined. The default cURL target is https://api.example.com.</div>}</div>}
+            {selected&&<div className="endpoint-detail"><div className="detail-head"><span className={"method method-"+selected.method.toLowerCase()}>{selected.method}</span><code>{selected.path}</code><button className="icon-btn" onClick={()=>setSelected(null)} aria-label="Close endpoint details">×</button></div><p>{selected.operation.summary||"No summary provided."}</p><div className="detail-actions"><button className="text-btn" onClick={()=>copyCurl(selected)}>Copy cURL</button></div><pre>{JSON.stringify(selected.operation,null,2)}</pre></div>}
+          </>}
         </div>
       </div>
+      <p className="data-note">Validation covers common document structure and path parameters; it is not a full JSON Schema/OpenAPI conformance validator. YAML input, external $ref resolution and request execution are not supported. cURL path placeholders use the sample value VALUE.</p>
     </div>
   </ToolShell>
 }
-
 function DataTransformWorkbench(){
   const [mode,setMode]=useState("YAML → JSON");
   const [input,setInput]=useState("name: DevBox\nversion: 16\nfeatures:\n  - JSON\n  - YAML\n  - CSV");
