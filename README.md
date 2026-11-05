@@ -34,7 +34,6 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - JSON to TypeScript
 - API Scaffold Generator
 - Code Formatter
-- Regex Workbench
 - Diff & Merge
 - Cron Expression Studio
 - Regex Workbench
