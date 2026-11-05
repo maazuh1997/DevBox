@@ -21,7 +21,20 @@ const tools = [
   {id:"color", name:"Color Converter", desc:"Convert HEX, RGB and HSL colors", icon:Palette, category:"Converters"},
   {id:"http", name:"HTTP Tester", desc:"Send requests from your browser", icon:Globe2, category:"Network"},
   {id:"markdown", name:"Markdown", desc:"Preview and format Markdown", icon:FileText, category:"Text"},
-  {id:"sql", name:"SQL Formatter", desc:"Clean up SQL queries", icon:Database, category:"Formatters"},{id:"json-diff",name:"JSON Diff",desc:"Compare JSON documents side by side.",category:"Formatters",icon:Braces},{id:"regex-workbench",name:"Regex Workbench",desc:"Live matches, groups and replacement preview.",category:"Text",icon:Regex},{id:"hash-generator",name:"Hash Generator",desc:"SHA hashes for text, locally in your browser.",category:"Security",icon:Hash},{id:"curl-builder",name:"cURL Builder",desc:"Build and copy production-ready cURL commands.",category:"Network",icon:Globe2},{id:"http-client",name:"HTTP Client",desc:"Build, send and inspect HTTP requests.",category:"Network",icon:Globe2},{id:"sql-workbench",name:"SQL Workbench",desc:"Format and inspect SQL locally.",category:"Database",icon:Database},{id:"json-typescript",name:"JSON → TypeScript",desc:"Generate TypeScript interfaces from JSON.",category:"Code Generation",icon:Braces},{id:"openapi-workbench",name:"OpenAPI Workbench",desc:"Explore and inspect OpenAPI specifications.",category:"API",icon:Globe},{id:"data-transform",name:"Data Transform",desc:"Convert YAML, JSON and CSV locally.",category:"Data",icon:Globe2},{id:"jwt-inspector",name:"JWT Inspector",desc:"Decode JWT headers and claims.",category:"Security",icon:Globe2},{id:"markdown-studio",name:"Markdown Studio",desc:"Write and preview Markdown.",category:"Documentation",icon:Globe2},{id:"code-formatter",name:"Code Formatter",desc:"Format and minify code locally.",category:"Code",icon:Globe2},{id:"env-workbench",name:".env Workbench",desc:"Inspect and validate environment variables.",icon:Lock,category:"Security"},{id:"hash-hmac",name:"Hash & HMAC",desc:"Generate SHA hashes and HMAC signatures.",icon:Hash,category:"Security"},{id:"headers-inspector",name:"Headers Inspector",desc:"Inspect HTTP and security headers.",icon:Globe2,category:"Network"},{id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text or JSON.",icon:FileText,category:"Text"}];
+  {id:"sql", name:"SQL Formatter", desc:"Clean up SQL queries", icon:Database, category:"Formatters"},{id:"json-diff",name:"JSON Diff",desc:"Compare JSON documents side by side.",category:"Formatters",icon:Braces},{id:"regex-workbench",name:"Regex Workbench",desc:"Live matches, groups and replacement preview.",category:"Text",icon:Regex},{id:"hash-generator",name:"Hash Generator",desc:"SHA hashes for text, locally in your browser.",category:"Security",icon:Hash},{id:"curl-builder",name:"cURL Builder",desc:"Build and copy production-ready cURL commands.",category:"Network",icon:Globe2},{id:"http-client",name:"HTTP Client",desc:"Build, send and inspect HTTP requests.",category:"Network",icon:Globe2},{id:"sql-workbench",name:"SQL Workbench",desc:"Format and inspect SQL locally.",category:"Database",icon:Database},{id:"json-typescript",name:"JSON → TypeScript",desc:"Generate TypeScript interfaces from JSON.",category:"Code Generation",icon:Braces},{id:"openapi-workbench",name:"OpenAPI Workbench",desc:"Explore and inspect OpenAPI specifications.",category:"API",icon:Globe2},{id:"data-transform",name:"Data Transform",desc:"Convert YAML, JSON and CSV locally.",category:"Data",icon:Globe2},{id:"jwt-inspector",name:"JWT Inspector",desc:"Decode JWT headers and claims.",category:"Security",icon:Globe2},{id:"markdown-studio",name:"Markdown Studio",desc:"Write and preview Markdown.",category:"Documentation",icon:Globe2},{id:"code-formatter",name:"Code Formatter",desc:"Format and minify code locally.",category:"Code",icon:Globe2},{id:"env-workbench",name:".env Workbench",desc:"Inspect and validate environment variables.",icon:Lock,category:"Security"},{id:"hash-hmac",name:"Hash & HMAC",desc:"Generate SHA hashes and HMAC signatures.",icon:Hash,category:"Security"},{id:"headers-inspector",name:"Headers Inspector",desc:"Inspect HTTP and security headers.",icon:Globe2,category:"Network"},{id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text or JSON.",icon:FileText,category:"Text"}];
+
+
+// Storage is optional: browsers can deny access in private/restricted contexts.
+function readStorage(key, fallback = null){
+  try { return window.localStorage.getItem(key) ?? fallback; }
+  catch { return fallback; }
+}
+function writeStorage(key, value){
+  try { window.localStorage.setItem(key, String(value)); return true; }
+  catch { return false; }
+}
+
+const categories = ["All", ...new Set(tools.map(tool => tool.category))];
 
 const initialJson = `{
   "name": "DevBox",
@@ -30,24 +43,45 @@ const initialJson = `{
   "active": true
 }`;
 
-function copyText(text, setCopied){
-  navigator.clipboard?.writeText(text);
-  setCopied(true);
-  setTimeout(()=>setCopied(false), 1200);
+async function copyText(text, setCopied){
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+    await navigator.clipboard.writeText(String(text));
+    setCopied(true);
+    setTimeout(()=>setCopied(false), 1200);
+  } catch {
+    setCopied(false);
+  }
 }
 
 function downloadText(name, text){
-  const blob = new Blob([text], {type:"text/plain"});
-  const url = URL.createObjectURL(blob);
+  let url;
   const a = document.createElement("a");
-  a.href=url; a.download=name; a.click();
-  URL.revokeObjectURL(url);
+  try{
+    const blob = new Blob([text], {type:"text/plain;charset=utf-8"});
+    url = URL.createObjectURL(blob);
+    a.href=url;
+    a.download=String(name||"download.txt").replace(/[\\r\\n\\0]/g,"_");
+    a.style.display="none";
+    document.body.appendChild(a);
+    a.click();
+  }catch{
+    // Downloads are best-effort in restricted browser contexts.
+  }finally{
+    a.remove();
+    // Keep the object URL alive until the browser has consumed the download.
+  }
 }
 
 function uuid(){
-  return crypto.randomUUID ? crypto.randomUUID() : "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g,c=>{
-    const r=Math.random()*16|0,v=c==="x"?r:(r&3|8); return v.toString(16);
-  });
+  if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
+  if (typeof crypto !== "undefined" && typeof crypto.getRandomValues === "function") {
+    const bytes = crypto.getRandomValues(new Uint8Array(16));
+    bytes[6] = (bytes[6] & 0x0f) | 0x40;
+    bytes[8] = (bytes[8] & 0x3f) | 0x80;
+    return [...bytes].map((b,i)=>[4,6,8,10].includes(i)?"-"+b.toString(16).padStart(2,"0"):b.toString(16).padStart(2,"0")).join("").replace(/^-/,"");
+  }
+  throw new Error("Secure UUID generation is not available in this browser context.");
 }
 
 async function digest(text, algorithm){
@@ -80,7 +114,7 @@ function ToolShell({tool=tools[0], title, subtitle, children, value, onClear}){
 }
 
 function JsonTool(){
-  const [input,setInput]=useState(localStorage.getItem("devbox-json")||initialJson);
+  const [input,setInput]=useState(readStorage("devbox-json")||initialJson);
   const [mode,setMode]=useState("pretty");
   const [sort,setSort]=useState(false);
   const [copied,setCopied]=useState(false);
@@ -103,7 +137,7 @@ function JsonTool(){
       return {ok:false,value:e.message,line};
     }
   },[input,mode,sort]);
-  useEffect(()=>localStorage.setItem("devbox-json",input),[input]);
+  useEffect(()=>writeStorage("devbox-json",input),[input]);
   useEffect(()=>{if(!input.trim())return;const timer=setTimeout(()=>window.__devboxAddHistory?.({toolId:"json",tool:"JSON Formatter",preview:input.slice(0,100)}),1000);return()=>clearTimeout(timer)},[input]);
   function loadFile(e){
     const file=e.target.files?.[0];
@@ -238,10 +272,9 @@ function UrlTool(){
 
 function QrTool(){
   const [text,setText]=useState("https://devbox.local");
-  const qr=`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(text)}`;
-  return <ToolShell tool={tools[8]} value={qr}>
+  return <ToolShell tool={tools[8]} value={text}>
     <Editor label="CONTENT" value={text} onChange={setText} placeholder="Text or URL"/>
-    <div className="qr-area"><img src={qr} alt="Generated QR code"/><p>Preview uses a QR image service. Other DevBox tools remain fully client-side.</p></div>
+    <div className="qr-area"><div className="qr-placeholder"><QrCode size={42}/><strong>Private QR generation</strong><p>QR output is temporarily unavailable until an on-device encoder is integrated. Your content is not sent to a third-party service.</p></div></div>
   </ToolShell>
 }
 
@@ -259,7 +292,27 @@ function HttpTool(){
   const [url,setUrl]=useState("https://jsonplaceholder.typicode.com/todos/1");
   const [method,setMethod]=useState("GET"); const [status,setStatus]=useState(""); const [body,setBody]=useState("");
   async function send(){
-    setStatus("Loading…"); try{const r=await fetch(url,{method,headers:{"Content-Type":"application/json"},body:method==="GET"?undefined:body}); const t=await r.text();setStatus(`${r.status} ${r.statusText}\\n\\n${t}`)}catch(e){setStatus(`Request failed. Browser CORS policy may block this endpoint.\\n\\n${e.message}`)}
+    let parsed;
+    try {
+      parsed = new URL(url);
+      if (!["http:", "https:"].includes(parsed.protocol)) throw new Error("Only HTTP and HTTPS URLs are supported.");
+      if (parsed.username || parsed.password) throw new Error("Do not put credentials in the URL. Use request headers instead.");
+    } catch (e) {
+      setStatus(e.message || "Enter a valid absolute HTTP(S) URL.");
+      return;
+    }
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 20000);
+    setStatus("Loading…");
+    try {
+      const r = await fetch(parsed.href, {method, headers: {"Content-Type":"application/json"}, body: method === "GET" ? undefined : body, signal: controller.signal});
+      const t = await r.text();
+      setStatus(`${r.status} ${r.statusText}\\n\\n${t}`);
+    } catch(e) {
+      setStatus(e.name === "AbortError" ? "Request timed out after 20 seconds." : `Request failed. Browser CORS policy may block this endpoint.\\n\\n${e.message}`);
+    } finally {
+      clearTimeout(timeout);
+    }
   }
   return <ToolShell tool={tools[10]} value={status} onClear={()=>setStatus("")}>
     <div className="http-line"><select value={method} onChange={e=>setMethod(e.target.value)}>{["GET","POST","PUT","PATCH","DELETE"].map(x=><option key={x}>{x}</option>)}</select><input value={url} onChange={e=>setUrl(e.target.value)}/><button className="primary" onClick={send}>Send</button></div>
@@ -271,7 +324,7 @@ function HttpTool(){
 function MarkdownTool(){
   const [input,setInput]=useState("# DevBox\n\nA **fast** developer toolkit.\n\n- Private\n- Browser-first\n- Free to use");
   function render(md){return md.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>").replace(/\*\*(.*?)\*\*/g,"<strong>$1</strong>").replace(/`(.*?)`/g,"<code>$1</code>").replace(/^- (.*)$/gm,"<li>$1</li>").replace(/\n\n/g,"<br/><br/>").replace(/\n/g,"<br/>")}
-  return <ToolShell tool={tools[11]} value={input}><div className="split"><Editor label="MARKDOWN" value={input} onChange={setInput}/><Panel label="PREVIEW"><div className="markdown-preview" dangerouslySetInnerHTML={{__html:render(input)}}/></Panel></div></ToolShell>
+  return <ToolShell tool={tools[11]} value={input}><div className="split"><Editor label="MARKDOWN" value={input} onChange={setInput}/><Panel label="PREVIEW"><pre className="markdown-preview markdown-safe-preview">{input}</pre></Panel></div></ToolShell>
 }
 
 function SqlTool(){
@@ -475,10 +528,15 @@ function CurlWorkbench(){
   const [headers,setHeaders]=useState([{key:"Accept",value:"application/json"}]);
   const [body,setBody]=useState("");
   const curl=useMemo(()=>{
-    let s=`curl -X ${method} '${url}'`;
-    headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H '${h.key}: ${h.value}'`);
-    if(body.trim())s+=` \\\n  --data '${body.replace(/'/g,"'\\\\''")}'`;
-    return s;
+    const quote=value=>"'"+String(value).replace(/'/g,"'\\''")+"'";
+    try{
+      const parsed=new URL(url);
+      if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)throw new Error();
+      let s=`curl -X ${method} ${quote(parsed.toString())}`;
+      headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H ${quote(`${h.key}: ${h.value}`)}`);
+      if(body.trim())s+=` \\\n  --data ${quote(body)}`;
+      return s;
+    }catch{return "Enter a valid HTTP(S) URL without embedded credentials."}
   },[method,url,headers,body]);
   return <ToolShell title="cURL Builder" subtitle="Build readable cURL requests and copy them into your terminal or scripts.">
     <div className="workbench">
@@ -509,26 +567,36 @@ function HttpClientWorkbench(){
   const [history,setHistory]=useState([]);
 
   const buildUrl=()=>{
-    try{
-      const u=new URL(url);
-      params.filter(p=>p.key.trim()).forEach(p=>u.searchParams.set(p.key,p.value));
-      return u.toString();
-    }catch(e){return url}
+    const u=new URL(url);
+    if(!["http:","https:"].includes(u.protocol))throw new Error("Only HTTP and HTTPS URLs are supported.");
+    if(u.username||u.password)throw new Error("Remove credentials from the URL and use the Authorization tab instead.");
+    params.filter(p=>p.key.trim()).forEach(p=>u.searchParams.set(p.key,p.value));
+    return u.toString();
   };
 
   const send=async()=>{
     setLoading(true);setError("");setResponse(null);
     const started=performance.now();
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),20000);
     try{
       const finalUrl=buildUrl();
       const hs={};
-      headers.filter(h=>h.key.trim()).forEach(h=>hs[h.key]=h.value);
+      headers.filter(h=>h.key.trim()).forEach(h=>{
+        const key=h.key.trim();
+        if(/[\\r\\n:]/.test(key)||/[\\r\\n]/.test(h.value))throw new Error("Header names or values contain invalid newline characters.");
+        hs[key]=h.value;
+      });
       if(auth==="Bearer"&&token)hs.Authorization=`Bearer ${token}`;
-      if(auth==="Basic"&&token)hs.Authorization=`Basic ${btoa(token)}`;
-      const opts={method,headers:hs};
+      if(auth==="Basic"&&token){
+        try{hs.Authorization=`Basic ${btoa(unescape(encodeURIComponent(token))) }`.trim()}
+        catch{throw new Error("Basic authorization credentials could not be encoded.")}
+      }
+      const opts={method,headers:hs,signal:controller.signal};
       if(!["GET","HEAD"].includes(method)&&body){
-        opts.body=bodyType==="JSON"?body:body;
+        opts.body=body;
         if(bodyType==="JSON"&&!Object.keys(hs).some(k=>k.toLowerCase()==="content-type"))hs["Content-Type"]="application/json";
+        if(bodyType==="JSON"){try{JSON.parse(body)}catch{throw new Error("Request body is not valid JSON.")}}
       }
       const res=await fetch(finalUrl,opts);
       const text=await res.text();
@@ -538,8 +606,8 @@ function HttpClientWorkbench(){
       setResponse({status:res.status,statusText:res.statusText,ok:res.ok,time:duration,size:text.length,headers:[...res.headers.entries()],text,parsed});
       setHistory(h=>[item,...h.filter(x=>!(x.method===item.method&&x.url===item.url))].slice(0,10));
     }catch(e){
-      setError(e.message||"Request failed. This request may be blocked by CORS.");
-    }finally{setLoading(false)}
+      setError(e.name==="AbortError"?"Request timed out after 20 seconds.":e.message||"Request failed. This request may be blocked by CORS.");
+    }finally{clearTimeout(timeoutId);setLoading(false)}
   };
 
   const loadHistory=item=>{
@@ -547,12 +615,16 @@ function HttpClientWorkbench(){
   };
   const copy=v=>navigator.clipboard?.writeText(v);
   const curl=useMemo(()=>{
-    let s=`curl -X ${method} '${buildUrl()}'`;
-    headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H '${h.key}: ${h.value}'`);
-    if(auth==="Bearer"&&token)s+=` \\\n  -H 'Authorization: Bearer ${token}'`;
-    if(auth==="Basic"&&token)s+=` \\\n  -H 'Authorization: Basic ${btoa(token)}'`;
-    if(!["GET","HEAD"].includes(method)&&body)s+=` \\\n  --data '${body.replace(/'/g,"'\\\\''")}'`;
-    return s;
+    // POSIX single-quote escaping prevents shell metacharacters from changing command meaning.
+    const quote=value=>"'"+String(value).replace(/'/g,"'\\''")+"'";
+    try{
+      let s=`curl -X ${method} ${quote(buildUrl())}`;
+      headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H ${quote(`${h.key}: ${h.value}`)}`);
+      if(auth==="Bearer"&&token)s+=` \\\n  -H ${quote(`Authorization: Bearer ${token}`)}`;
+      if(auth==="Basic"&&token)s+=` \\\n  -H ${quote(`Authorization: Basic ${btoa(token)}`)}`;
+      if(!["GET","HEAD"].includes(method)&&body)s+=` \\\n  --data ${quote(body)}`;
+      return s;
+    }catch{return "Enter a valid HTTP(S) URL to generate cURL."}
   },[method,url,params,headers,auth,token,body]);
 
   return <ToolShell title="HTTP Client" subtitle="Build, send and inspect HTTP requests directly from your browser.">
@@ -810,14 +882,18 @@ function JwtInspector(){
   const [token,setToken]=useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZib3giLCJyb2xlIjoiZGV2ZWxvcGVyIiwiZXhwIjo0MTAyNDQ0ODAwfQ.signature");
   const decodePart=value=>{
     try{
+      if(!value||!/^[A-Za-z0-9_-]+$/.test(value))return null;
       const normalized=value.replace(/-/g,"+").replace(/_/g,"/");
       const padded=normalized+"=".repeat((4-normalized.length%4)%4);
-      return JSON.parse(atob(padded));
+      const binary=atob(padded);
+      const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));
+      return JSON.parse(new TextDecoder("utf-8",{fatal:true}).decode(bytes));
     }catch(e){return null}
   };
-  const parts=token.split(".");
-  const header=decodePart(parts[0]);
-  const payload=decodePart(parts[1]);
+  const parts=token.trim().split(".");
+  const structurallyValid=parts.length===3&&parts.every(Boolean);
+  const header=structurallyValid?decodePart(parts[0]):null;
+  const payload=structurallyValid?decodePart(parts[1]):null;
   const exp=payload?.exp;
   const expiry=exp?new Date(exp*1000):null;
   const expired=expiry?expiry.getTime()<Date.now():false;
@@ -838,7 +914,7 @@ function MarkdownStudio(){
   const [tab,setTab]=useState("split");
   const [copied,setCopied]=useState(false);
 
-  const escapeHtml=v=>v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const escapeHtml=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const renderMarkdown=v=>{
     let html=escapeHtml(v);
     html=html.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>");
@@ -848,7 +924,7 @@ function MarkdownStudio(){
     html=html.replace(/`([^`]+)`/g,"<code>$1</code>");
     html=html.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
     html=html.replace(/\*([^*]+)\*/g,"<em>$1</em>");
-    html=html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+    html=html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,(match,label,destination)=>{try{const url=new URL(destination,window.location.href);if(!["http:","https:","mailto:"].includes(url.protocol))return label;return `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer">${label}</a>`}catch{return label}});
     html=html.replace(/^(?!<h\d|<ul|<pre|<\/ul|<li)(.+)$/gm,"<p>$1</p>");
     return {__html:html.replace(/\n{2,}/g,"")};
   };
@@ -1002,29 +1078,29 @@ function App(){
   const [workspaceOpen,setWorkspaceOpen]=useState(false);
   const [historyItems,setHistoryItems]=useState(()=>{
     try{
-      const value=JSON.parse(localStorage.getItem("devbox-history")||"[]");
+      const value=JSON.parse(readStorage("devbox-history","[]"));
       return Array.isArray(value)?value:[];
     }catch(e){return []}
   });
   const [settingsOpen,setSettingsOpen]=useState(false);
-  const [dark,setDark]=useState(localStorage.getItem("devbox-theme")!=="light");
+  const [dark,setDark]=useState(readStorage("devbox-theme")!=="light");
   const [favorites,setFavorites]=useState(()=>{
     try{
-      const value=JSON.parse(localStorage.getItem("devbox-favorites")||"[]");
+      const value=JSON.parse(readStorage("devbox-favorites","[]"));
       return Array.isArray(value)?value:[];
     }catch(e){return []}
   });
-  useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";localStorage.setItem("devbox-theme",dark?"dark":"light")},[dark]);
+  useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";writeStorage("devbox-theme",dark?"dark":"light")},[dark]);
   useEffect(()=>setMeta(active),[active]);
   useEffect(()=>{
     const onPop=()=>{setActive(getToolFromPath());setMobile(false);setQuery("");window.scrollTo({top:0,behavior:"auto"})};
     window.addEventListener("popstate",onPop);
     return()=>window.removeEventListener("popstate",onPop);
   },[]);
-  useEffect(()=>localStorage.setItem("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
-  const addHistory=item=>setHistoryItems(prev=>[{...item,id:crypto.randomUUID(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
+  useEffect(()=>writeStorage("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
+  const addHistory=item=>setHistoryItems(prev=>[{...item,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
   useEffect(()=>{window.__devboxAddHistory=addHistory;return()=>delete window.__devboxAddHistory},[]);
-  useEffect(()=>localStorage.setItem("devbox-favorites",JSON.stringify(favorites)),[favorites]);
+  useEffect(()=>writeStorage("devbox-favorites",JSON.stringify(favorites)),[favorites]);
   useEffect(()=>{
     const handler=e=>{
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.querySelector(".top-search input")?.focus()}
@@ -1048,6 +1124,7 @@ function App(){
   const content={
     json:<JsonTool/>,jwt:<JwtTool/>,uuid:<UuidTool/>,base64:<Base64Tool/>,hash:<HashTool/>,regex:<RegexTool/>,timestamp:<TimestampTool/>,url:<UrlTool/>,qr:<QrTool/>,color:<ColorTool/>,http:<HttpTool/>,markdown:<MarkdownTool/>,sql:<SqlTool/>,
     "json-diff":<JsonDiffTool/>,"regex-workbench":<RegexWorkbench/>,"hash-generator":<HashWorkbench/>,"curl-builder":<CurlWorkbench/>,"http-client":<HttpClientWorkbench/>,
+    "sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"jwt-inspector":<JwtInspector/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,
     "env-workbench":<EnvWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>
   }[active]||<JsonTool/>;
 
@@ -1065,7 +1142,7 @@ function App(){
         <button className="home-btn" onClick={()=>selectTool("json")}><Sparkles size={17}/> All tools <span>{tools.length}</span></button>
         {favoriteTools.length>0&&<><div className="side-label">FAVORITES</div>{favoriteTools.map(t=><SideItem key={t.id} tool={t} active={active===t.id} onClick={()=>selectTool(t.id)} fav onFav={()=>toggleFav(t.id)}/>)}</>}
         <div className="side-label">TOOLS</div>
-        {["Formatters","Security","Generators","Encoding","Text","Converters","Network"].map(cat=>{
+        {categories.slice(1).map(cat=>{
           const list=filtered.filter(t=>t.category===cat); if(!list.length)return null;
           return <div className="tool-group" key={cat}><div className="category">{cat}</div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
         })}
@@ -1079,7 +1156,7 @@ function App(){
           <div className="hero-stats"><div><strong>{tools.length}</strong><span>tools</span></div><div><strong>0</strong><span>required APIs</span></div><div><strong>100%</strong><span>browser-first</span></div></div>
         </section>
         <div className="section-heading"><div><span className="section-kicker">TOOLKIT</span><h2>Everything you need, one click away.</h2></div><span className="tool-count">{filtered.length} tools</span></div>
-        <div className="category-pills">{["All","Formatters","Security","Generators","Encoding","Text","Converters","Network"].map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
+        <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
         <div className="quick-grid">{filtered.map(t=><button className={active===t.id?"quick active":"quick"} key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={17}/><span><strong>{t.name}</strong><small>{t.desc}</small></span><ChevronRight size={14}/></button>)}</div>
         <div className="content">{content}</div>
         <section className="seo-section">
