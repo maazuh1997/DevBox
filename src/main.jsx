@@ -1072,7 +1072,7 @@ function DiffMergeWorkbench(){
 }
 function App(){
   const [active,setActive]=useState(getToolFromPath());
-  const [view,setView]=useState("catalog");
+  const [view,setView]=useState(getToolFromPath()==="json"?"catalog":"workspace");
   const [query,setQuery]=useState("");
   const [category,setCategory]=useState("All");
   const [mobile,setMobile]=useState(false);
@@ -1153,10 +1153,10 @@ function App(){
       </aside>
       <main className="main">
         <div className="breadcrumb"><span>DevBox</span><ChevronRight size={14}/><strong>{current.name}</strong><button className="favorite-main" onClick={()=>toggleFav(current.id)}>{favorites.includes(current.id)?<Star fill="currentColor" size={17}/>:<Star size={17}/>}</button></div>
-        <section className="hero">
+        {view==="catalog"&&<section className="hero">
           <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> FAST · PRIVATE · BROWSER-FIRST</div><h1><span className="outline-word">DEV</span><br/>TOOLS<br/><span>REIMAGINED.</span></h1><p>One focused workspace for the utilities developers reach for every day. Fast, expressive and private by design.</p><div className="hero-actions"><button className="hero-cta" onClick={()=>selectTool("json")}>Explore tools <ChevronRight size={16}/></button><span><Lock size={13}/> No signup required</span></div></div>
           <div className="hero-stats"><div><strong>{tools.length}</strong><span>tools</span></div><div><strong>0</strong><span>required APIs</span></div><div><strong>100%</strong><span>browser-first</span></div></div>
-        </section>
+        </section>}
         {view==="catalog"&&<div className="section-heading"><div><span className="section-kicker">TOOLKIT</span><h2>What are you working on?</h2><p className="catalog-subtitle">Search by task or choose a tool. Your recent and favorite tools stay close at hand.</p></div><span className="tool-count">{filtered.length} tools</span></div>}
         {view==="catalog"?<>
           {historyItems.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">PICK UP WHERE YOU LEFT OFF</span><h3>Recently used</h3></div></div><div className="recent-row">{historyItems.slice(0,5).map(item=>{const t=tools.find(x=>x.id===item.toolId);return t?<button className="recent-tool" key={item.toolId} onClick={()=>selectTool(t.id)}><t.icon size={16}/><span>{t.name}</span><ChevronRight size={14}/></button>:null})}</div></section>}
