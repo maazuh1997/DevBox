@@ -862,77 +862,166 @@ function DataTransformWorkbench(){
   const [mode,setMode]=useState("YAML → JSON");
   const [input,setInput]=useState("name: DevBox\nversion: 16\nfeatures:\n  - JSON\n  - YAML\n  - CSV");
   const [delimiter,setDelimiter]=useState(",");
+  const [output,setOutput]=useState("");
   const [error,setError]=useState("");
+  const [converted,setConverted]=useState(false);
 
-  const yamlToJson=value=>{
-    const lines=value.split(/\r?\n/).filter(line=>line.trim()&&!line.trim().startsWith("#"));
-    const root={};
-    let current=root;
-    lines.forEach(line=>{
-      const m=line.match(/^(\s*)([^:#]+):\s*(.*)$/);
-      if(!m)return;
-      const indent=m[1].length,key=m[2].trim(),raw=m[3].trim();
-      const val=raw===""?{}:raw==="true"?true:raw==="false"?false:/^-?\d+(\.\d+)?$/.test(raw)?Number(raw):raw.replace(/^['"]|['"]$/g,"");
-      if(indent===0){root[key]=val;if(raw==="")current=root[key]}
-    });
-    return root;
+  const parseScalar=value=>{
+    const text=value.trim();
+    if(text==="")return "";
+    if(text==="true")return true;
+    if(text==="false")return false;
+    if(text==="null"||text==="~")return null;
+    if(/^-?(?:0|[1-9]\d*)(?:\.\d+)?(?:e[+-]?\d+)?$/i.test(text))return Number(text);
+    if(text.startsWith('"')){try{return JSON.parse(text)}catch{throw new Error("Invalid quoted YAML string: "+text)}}
+    if(text.startsWith("'")&&text.endsWith("'"))return text.slice(1,-1).replace(/''/g,"'");
+    if(text.startsWith("[")||text.startsWith("{")){try{return JSON.parse(text)}catch{throw new Error("Flow-style YAML values must use valid JSON syntax.")}}
+    return text.replace(/\s+#.*$/,"").trim();
   };
-  const csvToJson=value=>{
-    const rows=value.trim().split(/\r?\n/).filter(Boolean);
-    if(!rows.length)return [];
-    const headers=rows[0].split(delimiter).map(x=>x.trim());
-    return rows.slice(1).map(row=>{
-      const cells=row.split(delimiter);
-      const obj={};
-      headers.forEach((h,i)=>obj[h]=cells[i]===undefined?"":cells[i]);
-      return obj;
-    });
-  };
-  const convert=()=>{
-    try{
-      setError("");
-      if(mode==="YAML → JSON"){
-        setInput(JSON.stringify(yamlToJson(input),null,2));
-        setMode("JSON");
-      }else if(mode==="JSON → YAML"){
-        const obj=JSON.parse(input);
-        const lines=[];
-        Object.entries(obj).forEach(([k,v])=>{
-          if(Array.isArray(v)){lines.push(`${k}:`);v.forEach(x=>lines.push(`  - ${x}`))}
-          else if(v&&typeof v==="object"){lines.push(`${k}:`);Object.entries(v).forEach(([a,b])=>lines.push(`  ${a}: ${b}`))}
-          else lines.push(`${k}: ${String(v)}`);
-        });
-        setInput(lines.join("\n"));setMode("YAML");
-      }else if(mode==="CSV → JSON"){
-        setInput(JSON.stringify(csvToJson(input),null,2));setMode("JSON");
-      }else if(mode==="JSON → CSV"){
-        const obj=JSON.parse(input);
-        const rows=Array.isArray(obj)?obj:[obj];
-        const headers=[...new Set(rows.flatMap(x=>Object.keys(x||{})))];
-        setInput([headers.join(delimiter),...rows.map(x=>headers.map(h=>String(x?.[h]??"").replaceAll(delimiter," ")).join(delimiter))].join("\n"));setMode("CSV");
+
+  const parseYaml=value=>{
+    const lines=value.split(/\r?\n/).map((raw,index)=>({indent:raw.match(/^\s*/)[0].replace(/\t/g,"  ").length,text:raw.trim(),line:index+1})).filter(x=>x.text&&!x.text.startsWith("#"));
+    if(!lines.length)return {};
+    if(lines.some(x=>/^\t/.test(value.split(/\r?\n/)[x.line-1])))throw new Error("YAML indentation must use spaces, not tabs.");
+    const parseBlock=(from,indent)=>{
+      const isList=lines[from]?.text.startsWith("- ");
+      const result=isList?[]:{};
+      let i=from;
+      while(i<lines.length&&lines[i].indent===indent){
+        const line=lines[i];
+        if(isList){
+          if(!line.text.startsWith("- ")&&line.text!=="-")throw new Error("Do not mix YAML list items and object keys at line "+line.line+".");
+          const raw=line.text.slice(1).trim();
+          if(!raw){if(lines[i+1]&&lines[i+1].indent>indent){const child=parseBlock(i+1,lines[i+1].indent);result.push(child.value);i=child.next}else{result.push(null);i++}}
+          else if(/^[^:[\]{}]+:\s*/.test(raw)){
+            const match=raw.match(/^([^:]+):\s*(.*)$/);
+            const obj={};const key=match[1].trim();obj[key]=match[2]?parseScalar(match[2]):null;
+            i++;
+            if(lines[i]&&lines[i].indent>indent){
+              const child=parseBlock(i,lines[i].indent);
+              if(Array.isArray(child.value)||!child.value||typeof child.value!=="object")throw new Error("Expected nested YAML object at line "+lines[i].line+".");
+              Object.assign(obj,child.value);i=child.next;
+            }
+            result.push(obj);
+          }else{result.push(parseScalar(raw));i++}
+        }else{
+          const match=line.text.match(/^([^:]+):(?:\s+(.*)|\s*)$/);
+          if(!match)throw new Error("Expected a YAML key/value pair at line "+line.line+".");
+          const key=parseScalar(match[1]);
+          if(typeof key!=="string"||!key)throw new Error("YAML object keys must be non-empty strings at line "+line.line+".");
+          const raw=(match[2]||"").trim();i++;
+          if(raw)result[key]=parseScalar(raw);
+          else if(lines[i]&&lines[i].indent>indent){const child=parseBlock(i,lines[i].indent);result[key]=child.value;i=child.next}
+          else result[key]=null;
+        }
+        if(lines[i]&&lines[i].indent<indent)break;
+        if(lines[i]&&lines[i].indent>indent)throw new Error("Unexpected indentation at line "+lines[i].line+".");
       }
-    }catch(e){setError(e.message)}
+      return {value:result,next:i};
+    };
+    const parsed=parseBlock(0,lines[0].indent);
+    if(parsed.next!==lines.length)throw new Error("Could not parse YAML near line "+lines[parsed.next].line+".");
+    return parsed.value;
+  };
+
+  const parseCsv=value=>{
+    const rows=[];let row=[],field="",quoted=false,afterQuote=false;
+    for(let i=0;i<value.length;i++){
+      const ch=value[i];
+      if(quoted){
+        if(ch==='"'&&value[i+1]==='"'){field+='"';i++}
+        else if(ch==='"'){quoted=false;afterQuote=true}
+        else field+=ch;
+      }else if(ch==='"'){
+        if(field.length||afterQuote)throw new Error("Unexpected quote in CSV at character "+(i+1)+".");
+        quoted=true;
+      }else if(ch===delimiter){row.push(field);field="";afterQuote=false}
+      else if(ch==="\n"||ch==="\r"){
+        if(ch==="\r"&&value[i+1]==="\n")i++;
+        row.push(field);if(row.some(cell=>cell!==""))rows.push(row);
+        row=[];field="";afterQuote=false;
+      }else{
+        if(afterQuote&&!/\s/.test(ch))throw new Error("Unexpected character after a quoted CSV field at character "+(i+1)+".");
+        if(!afterQuote)field+=ch;
+      }
+    }
+    if(quoted)throw new Error("CSV contains an unclosed quoted field.");
+    row.push(field);if(row.some(cell=>cell!==""))rows.push(row);
+    if(!rows.length)return [];
+    const headers=rows[0].map(x=>x.trim());
+    if(headers.some(x=>!x))throw new Error("CSV header names cannot be empty.");
+    if(new Set(headers).size!==headers.length)throw new Error("CSV contains duplicate header names.");
+    return rows.slice(1).map((cells,index)=>{
+      if(cells.length>headers.length)throw new Error("CSV row "+(index+2)+" has more values than the header.");
+      return Object.fromEntries(headers.map((header,i)=>[header,cells[i]??""]));
+    });
+  };
+
+  const csvCell=value=>{
+    const text=value===null||value===undefined?"":typeof value==="object"?JSON.stringify(value):String(value);
+    return /["\r\n]/.test(text)||text.includes(delimiter)?'"'+text.replace(/"/g,'""')+'"':text;
+  };
+  const toYaml=(value,indent=0)=>{
+    const pad=" ".repeat(indent),scalar=v=>typeof v==="string"?JSON.stringify(v):v===null?"null":String(v);
+    if(Array.isArray(value)){
+      if(!value.length)return [pad+"[]"];
+      return value.flatMap(item=>{
+        if(item&&typeof item==="object")return [pad+"-",...toYaml(item,indent+2)];
+        return [pad+"- "+scalar(item)];
+      });
+    }
+    if(value&&typeof value==="object"){
+      const entries=Object.entries(value);if(!entries.length)return [pad+"{}"];
+      return entries.flatMap(([key,item])=>{
+        const safeKey=/^[A-Za-z_][A-Za-z0-9_-]*$/.test(key)?key:JSON.stringify(key);
+        if(item&&typeof item==="object"&&Object.keys(item).length)return [pad+safeKey+":",...toYaml(item,indent+2)];
+        if(Array.isArray(item)&&!item.length)return [pad+safeKey+": []"];
+        if(item&&typeof item==="object"&&!Array.isArray(item)&&!Object.keys(item).length)return [pad+safeKey+": {}"];
+        return [pad+safeKey+": "+scalar(item)];
+      });
+    }
+    return [pad+scalar(value)];
+  };
+
+  const convert=()=>{
+    setError("");setConverted(false);
+    try{
+      let result="";
+      if(mode==="YAML → JSON")result=JSON.stringify(parseYaml(input),null,2);
+      else if(mode==="JSON → YAML")result=toYaml(JSON.parse(input)).join("\n");
+      else if(mode==="CSV → JSON"){
+        if(!delimiter)throw new Error("Choose a one-character CSV delimiter.");
+        result=JSON.stringify(parseCsv(input),null,2);
+      }else if(mode==="JSON → CSV"){
+        if(!delimiter)throw new Error("Choose a one-character CSV delimiter.");
+        const value=JSON.parse(input),rows=Array.isArray(value)?value:[value];
+        if(rows.some(x=>!x||typeof x!=="object"||Array.isArray(x)))throw new Error("JSON to CSV requires an object or an array of objects.");
+        const headers=[...new Set(rows.flatMap(x=>Object.keys(x)))];
+        result=headers.length?[headers.map(csvCell).join(delimiter),...rows.map(row=>headers.map(h=>csvCell(row[h])).join(delimiter))].join("\n"):"";
+      }
+      setOutput(result);setConverted(true);
+    }catch(e){setError(e.message||"Conversion failed.");setOutput("")}
   };
   const reset=()=>{
-    setError("");
+    setError("");setConverted(false);setOutput("");
     if(mode.includes("YAML"))setInput("name: DevBox\nversion: 16\nfeatures:\n  - JSON\n  - YAML\n  - CSV");
-    else if(mode.includes("CSV"))setInput("id,name,role\n1,Ada,admin\n2,Grace,developer");
+    else if(mode.includes("CSV"))setInput('id,name,role\n1,"Ada Lovelace",admin\n2,"Grace, Hopper",developer');
     else setInput('{\n  "name": "DevBox",\n  "version": 16\n}');
   };
-  return <ToolShell title="Data Transform" subtitle="Convert YAML, JSON and CSV locally without uploading your data.">
+  return <ToolShell title="Data Transform Studio" subtitle="Convert JSON, CSV and a practical YAML subset locally, with validation and downloadable output.">
     <div className="data-transform">
       <div className="data-toolbar">
-        <label>Conversion<select value={mode} onChange={e=>{setMode(e.target.value);setError("")}}><option>YAML → JSON</option><option>JSON → YAML</option><option>CSV → JSON</option><option>JSON → CSV</option></select></label>
-        {mode.includes("CSV")&&<label>Delimiter<input className="delimiter-input" value={delimiter} onChange={e=>setDelimiter(e.target.value.slice(0,1))}/></label>}
-        <button className="text-btn" onClick={reset}>Reset</button><button className="primary" onClick={convert}>Convert</button>
+        <label>Conversion<select value={mode} onChange={e=>{setMode(e.target.value);setError("");setOutput("");setConverted(false)}}><option>YAML → JSON</option><option>JSON → YAML</option><option>CSV → JSON</option><option>JSON → CSV</option></select></label>
+        {mode.includes("CSV")&&<label>Delimiter<input className="delimiter-input" maxLength={1} value={delimiter} onChange={e=>setDelimiter(e.target.value.slice(0,1))}/></label>}
+        <button className="text-btn" onClick={reset}>Load sample</button><button className="primary" onClick={convert}>Convert</button>
       </div>
-      <div className="data-editor"><div className="editor-head"><span>{mode.split(" → ")[0]}</span><span>{input.length} characters</span></div><textarea value={input} onChange={e=>setInput(e.target.value)} spellCheck="false"/></div>
-      {error&&<div className="inline-error">{error}</div>}
-      <div className="data-note">All conversion runs in your browser. No server upload.</div>
+      <div className="data-editor"><div className="editor-head"><span>{mode.split(" → ")[0]} INPUT</span><span>{input.length.toLocaleString()} characters</span></div><textarea value={input} onChange={e=>{setInput(e.target.value);setConverted(false);setError("")}} spellCheck="false"/></div>
+      {error&&<div className="inline-error" role="alert">{error}</div>}
+      {converted&&<div className="data-editor data-output"><div className="editor-head"><span>{mode.split(" → ")[1]} OUTPUT</span><span>{output.length.toLocaleString()} characters</span></div><textarea value={output} readOnly spellCheck="false"/><div className="advanced-footer"><button className="text-btn" onClick={()=>copyText(output,()=>{})}><Copy size={14}/> Copy output</button><button className="primary" onClick={()=>downloadText("devbox-converted."+({JSON:"json",YAML:"yaml",CSV:"csv"}[mode.split(" → ")[1]]||"txt"),output)}><Download size={14}/> Download output</button></div></div>}
+      <p className="data-note">CSV supports escaped quotes, delimiters and multiline fields. YAML supports nested mappings and scalar lists; advanced YAML features such as anchors, tags and block scalars are not implemented. Processing stays in your browser.</p>
     </div>
   </ToolShell>
 }
-
 function JwtInspector(){
   const [token,setToken]=useState("eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJkZXZib3giLCJyb2xlIjoiZGV2ZWxvcGVyIiwiZXhwIjo0MTAyNDQ0ODAwfQ.signature");
   const decodePart=value=>{
