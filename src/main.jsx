@@ -275,7 +275,8 @@ function TimestampTool(){
   const [timestamp,setTimestamp]=useState(String(Math.floor(Date.now()/1000)));
   const [date,setDate]=useState(new Date().toISOString().slice(0,16));
   const parsed=Number(timestamp);
-  const converted=Number.isFinite(parsed)?new Date(parsed*1000).toISOString():"Invalid timestamp";
+  const parsedDate=new Date(parsed*1000);
+  const converted=Number.isFinite(parsed)&&!Number.isNaN(parsedDate.getTime())?parsedDate.toISOString():"Invalid timestamp";
   const dateTs=Number.isNaN(new Date(date).getTime())?"Invalid date":Math.floor(new Date(date).getTime()/1000);
   return <ToolShell tool={tools.find(t=>t.id==="timestamp-converter")} value={`${converted}\n${dateTs}`}>
     <div className="cards two"><Panel label="UNIX → DATE"><input value={timestamp} onChange={e=>setTimestamp(e.target.value)}/><div className="result">{converted}</div></Panel><Panel label="DATE → UNIX"><input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)}/><div className="result">{dateTs}</div></Panel></div>
