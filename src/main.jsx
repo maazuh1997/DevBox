@@ -34,6 +34,8 @@ function writeStorage(key, value){
   catch { return false; }
 }
 
+const categories = ["All", ...new Set(tools.map(tool => tool.category))];
+
 const initialJson = `{
   "name": "DevBox",
   "version": 1,
@@ -1107,7 +1109,7 @@ function App(){
         <button className="home-btn" onClick={()=>selectTool("json")}><Sparkles size={17}/> All tools <span>{tools.length}</span></button>
         {favoriteTools.length>0&&<><div className="side-label">FAVORITES</div>{favoriteTools.map(t=><SideItem key={t.id} tool={t} active={active===t.id} onClick={()=>selectTool(t.id)} fav onFav={()=>toggleFav(t.id)}/>)}</>}
         <div className="side-label">TOOLS</div>
-        {["Formatters","Security","Generators","Encoding","Text","Converters","Network"].map(cat=>{
+        {categories.slice(1).map(cat=>{
           const list=filtered.filter(t=>t.category===cat); if(!list.length)return null;
           return <div className="tool-group" key={cat}><div className="category">{cat}</div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
         })}
@@ -1121,7 +1123,7 @@ function App(){
           <div className="hero-stats"><div><strong>{tools.length}</strong><span>tools</span></div><div><strong>0</strong><span>required APIs</span></div><div><strong>100%</strong><span>browser-first</span></div></div>
         </section>
         <div className="section-heading"><div><span className="section-kicker">TOOLKIT</span><h2>Everything you need, one click away.</h2></div><span className="tool-count">{filtered.length} tools</span></div>
-        <div className="category-pills">{["All","Formatters","Security","Generators","Encoding","Text","Converters","Network"].map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
+        <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
         <div className="quick-grid">{filtered.map(t=><button className={active===t.id?"quick active":"quick"} key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={17}/><span><strong>{t.name}</strong><small>{t.desc}</small></span><ChevronRight size={14}/></button>)}</div>
         <div className="content">{content}</div>
         <section className="seo-section">
