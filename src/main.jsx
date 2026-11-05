@@ -23,6 +23,17 @@ const tools = [
   {id:"markdown", name:"Markdown", desc:"Preview and format Markdown", icon:FileText, category:"Text"},
   {id:"sql", name:"SQL Formatter", desc:"Clean up SQL queries", icon:Database, category:"Formatters"},{id:"json-diff",name:"JSON Diff",desc:"Compare JSON documents side by side.",category:"Formatters",icon:Braces},{id:"regex-workbench",name:"Regex Workbench",desc:"Live matches, groups and replacement preview.",category:"Text",icon:Regex},{id:"hash-generator",name:"Hash Generator",desc:"SHA hashes for text, locally in your browser.",category:"Security",icon:Hash},{id:"curl-builder",name:"cURL Builder",desc:"Build and copy production-ready cURL commands.",category:"Network",icon:Globe2},{id:"http-client",name:"HTTP Client",desc:"Build, send and inspect HTTP requests.",category:"Network",icon:Globe2},{id:"sql-workbench",name:"SQL Workbench",desc:"Format and inspect SQL locally.",category:"Database",icon:Database},{id:"json-typescript",name:"JSON → TypeScript",desc:"Generate TypeScript interfaces from JSON.",category:"Code Generation",icon:Braces},{id:"openapi-workbench",name:"OpenAPI Workbench",desc:"Explore and inspect OpenAPI specifications.",category:"API",icon:Globe2},{id:"data-transform",name:"Data Transform",desc:"Convert YAML, JSON and CSV locally.",category:"Data",icon:Globe2},{id:"jwt-inspector",name:"JWT Inspector",desc:"Decode JWT headers and claims.",category:"Security",icon:Globe2},{id:"markdown-studio",name:"Markdown Studio",desc:"Write and preview Markdown.",category:"Documentation",icon:Globe2},{id:"code-formatter",name:"Code Formatter",desc:"Format and minify code locally.",category:"Code",icon:Globe2},{id:"env-workbench",name:".env Workbench",desc:"Inspect and validate environment variables.",icon:Lock,category:"Security"},{id:"hash-hmac",name:"Hash & HMAC",desc:"Generate SHA hashes and HMAC signatures.",icon:Hash,category:"Security"},{id:"headers-inspector",name:"Headers Inspector",desc:"Inspect HTTP and security headers.",icon:Globe2,category:"Network"},{id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text or JSON.",icon:FileText,category:"Text"}];
 
+
+// Storage is optional: browsers can deny access in private/restricted contexts.
+function readStorage(key, fallback = null){
+  try { return window.localStorage.getItem(key) ?? fallback; }
+  catch { return fallback; }
+}
+function writeStorage(key, value){
+  try { window.localStorage.setItem(key, String(value)); return true; }
+  catch { return false; }
+}
+
 const initialJson = `{
   "name": "DevBox",
   "version": 1,
@@ -90,7 +101,7 @@ function ToolShell({tool=tools[0], title, subtitle, children, value, onClear}){
 }
 
 function JsonTool(){
-  const [input,setInput]=useState(localStorage.getItem("devbox-json")||initialJson);
+  const [input,setInput]=useState(readStorage("devbox-json")||initialJson);
   const [mode,setMode]=useState("pretty");
   const [sort,setSort]=useState(false);
   const [copied,setCopied]=useState(false);
@@ -113,7 +124,7 @@ function JsonTool(){
       return {ok:false,value:e.message,line};
     }
   },[input,mode,sort]);
-  useEffect(()=>localStorage.setItem("devbox-json",input),[input]);
+  useEffect(()=>writeStorage("devbox-json",input),[input]);
   useEffect(()=>{if(!input.trim())return;const timer=setTimeout(()=>window.__devboxAddHistory?.({toolId:"json",tool:"JSON Formatter",preview:input.slice(0,100)}),1000);return()=>clearTimeout(timer)},[input]);
   function loadFile(e){
     const file=e.target.files?.[0];
@@ -1033,29 +1044,29 @@ function App(){
   const [workspaceOpen,setWorkspaceOpen]=useState(false);
   const [historyItems,setHistoryItems]=useState(()=>{
     try{
-      const value=JSON.parse(localStorage.getItem("devbox-history")||"[]");
+      const value=JSON.parse(readStorage("devbox-history","[]"));
       return Array.isArray(value)?value:[];
     }catch(e){return []}
   });
   const [settingsOpen,setSettingsOpen]=useState(false);
-  const [dark,setDark]=useState(localStorage.getItem("devbox-theme")!=="light");
+  const [dark,setDark]=useState(readStorage("devbox-theme")!=="light");
   const [favorites,setFavorites]=useState(()=>{
     try{
-      const value=JSON.parse(localStorage.getItem("devbox-favorites")||"[]");
+      const value=JSON.parse(readStorage("devbox-favorites","[]"));
       return Array.isArray(value)?value:[];
     }catch(e){return []}
   });
-  useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";localStorage.setItem("devbox-theme",dark?"dark":"light")},[dark]);
+  useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";writeStorage("devbox-theme",dark?"dark":"light")},[dark]);
   useEffect(()=>setMeta(active),[active]);
   useEffect(()=>{
     const onPop=()=>{setActive(getToolFromPath());setMobile(false);setQuery("");window.scrollTo({top:0,behavior:"auto"})};
     window.addEventListener("popstate",onPop);
     return()=>window.removeEventListener("popstate",onPop);
   },[]);
-  useEffect(()=>localStorage.setItem("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
-  const addHistory=item=>setHistoryItems(prev=>[{...item,id:crypto.randomUUID(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
+  useEffect(()=>writeStorage("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
+  const addHistory=item=>setHistoryItems(prev=>[{...item,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
   useEffect(()=>{window.__devboxAddHistory=addHistory;return()=>delete window.__devboxAddHistory},[]);
-  useEffect(()=>localStorage.setItem("devbox-favorites",JSON.stringify(favorites)),[favorites]);
+  useEffect(()=>writeStorage("devbox-favorites",JSON.stringify(favorites)),[favorites]);
   useEffect(()=>{
     const handler=e=>{
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.querySelector(".top-search input")?.focus()}
