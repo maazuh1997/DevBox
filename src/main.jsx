@@ -867,7 +867,7 @@ function MarkdownStudio(){
     html=html.replace(/`([^`]+)`/g,"<code>$1</code>");
     html=html.replace(/\*\*([^*]+)\*\*/g,"<strong>$1</strong>");
     html=html.replace(/\*([^*]+)\*/g,"<em>$1</em>");
-    html=html.replace(/\[([^\]]+)\]\(([^)]+)\)/g,'<a href="$2" target="_blank" rel="noreferrer">$1</a>');
+    html=html.replace(/\\[([^\\]]+)\\]\\(([^)]+)\\)/g,(match,label,destination)=>{try{const url=new URL(destination,window.location.href);if(!["http:","https:","mailto:"].includes(url.protocol))return label;return `<a href="${escapeHtml(url.href)}" target="_blank" rel="noopener noreferrer">${label}</a>`}catch{return label}});
     html=html.replace(/^(?!<h\d|<ul|<pre|<\/ul|<li)(.+)$/gm,"<p>$1</p>");
     return {__html:html.replace(/\n{2,}/g,"")};
   };
