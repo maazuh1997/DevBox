@@ -571,13 +571,21 @@ function HttpClientWorkbench(){
     try{
       const finalUrl=buildUrl();
       const hs={};
-      headers.filter(h=>h.key.trim()).forEach(h=>hs[h.key]=h.value);
+      headers.filter(h=>h.key.trim()).forEach(h=>{
+        const key=h.key.trim();
+        if(/[\\r\\n:]/.test(key)||/[\\r\\n]/.test(h.value))throw new Error("Header names or values contain invalid newline characters.");
+        hs[key]=h.value;
+      });
       if(auth==="Bearer"&&token)hs.Authorization=`Bearer ${token}`;
-      if(auth==="Basic"&&token)hs.Authorization=`Basic ${btoa(token)}`;
+      if(auth==="Basic"&&token){
+        try{hs.Authorization=`Basic ${btoa(unescape(encodeURIComponent(token))) }`.trim()}
+        catch{throw new Error("Basic authorization credentials could not be encoded.")}
+      }
       const opts={method,headers:hs,signal:controller.signal};
       if(!["GET","HEAD"].includes(method)&&body){
-        opts.body=bodyType==="JSON"?body:body;
+        opts.body=body;
         if(bodyType==="JSON"&&!Object.keys(hs).some(k=>k.toLowerCase()==="content-type"))hs["Content-Type"]="application/json";
+        if(bodyType==="JSON"){try{JSON.parse(body)}catch{throw new Error("Request body is not valid JSON.")}}
       }
       const res=await fetch(finalUrl,opts);
       const text=await res.text();
