@@ -1130,7 +1130,7 @@ function App(){
     return()=>window.removeEventListener("popstate",onPop);
   },[]);
   useEffect(()=>writeStorage("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
-  const addHistory=item=>setHistoryItems(prev=>[{...item,toolId:canonicalToolId(item.toolId)||item.toolId,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
+  const addHistory=item=>{const toolId=canonicalToolId(item.toolId)||item.toolId;setHistoryItems(prev=>[{...item,toolId,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==toolId)].slice(0,40));};
   useEffect(()=>{window.__devboxAddHistory=addHistory;return()=>delete window.__devboxAddHistory},[]);
   useEffect(()=>writeStorage("devbox-favorites",JSON.stringify(favorites)),[favorites]);
   useEffect(()=>{
