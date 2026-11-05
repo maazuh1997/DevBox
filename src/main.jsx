@@ -1445,7 +1445,7 @@ function App(){
       <button className="brand brand-button" onClick={showCatalog} aria-label="Go to DevBox home"><div className="brand-mark"><Command size={18}/></div><span>Dev<span>Box</span></span><small>DEVELOPER WORKSPACE</small></button>
       <div className="top-search">
         <Search size={17}/>
-        <input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{if(view==="catalog")setCategory("All")}} placeholder="Search advanced developer workflows…" aria-label="Search developer tools"/>
+        <input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{if(view==="catalog")setCategory("All")}} placeholder="Search tools by name or task…" aria-label="Search developer tools"/>
         <kbd>⌘ K</kbd>
         {searchResults.length>0&&<div className="search-results">{searchResults.map(t=><button key={t.id} onMouseDown={e=>e.preventDefault()} onClick={()=>selectTool(t.id)}><span className="search-result-icon"><t.icon size={16}/></span><span><strong>{t.name}</strong><small>{t.category} · {t.desc}</small></span><ChevronRight size={15}/></button>)}</div>}
         {query.trim()&&!searchResults.length&&<div className="search-results search-empty"><span>No matching tools</span><button onClick={()=>setQuery("")}>Clear search</button></div>}
@@ -1462,13 +1462,13 @@ function App(){
       <aside className={mobile?"sidebar open":"sidebar"}>
         <div className="sidebar-scroll">
           <div className="side-label">WORKSPACE</div>
-          <button className={view==="catalog"?"home-btn active":"home-btn"} onClick={showCatalog}><Sparkles size={16}/> Discover tools <span>{tools.length}</span></button>
+          <button className={view==="catalog"?"home-btn active":"home-btn"} onClick={showCatalog}><Sparkles size={16}/> All tools <span>{tools.length}</span></button>
           {favoriteTools.length>0&&<><div className="side-label">PINNED</div>{favoriteTools.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav onFav={()=>toggleFav(t.id)}/>)}</>}
           <div className="side-label">BROWSE BY CATEGORY</div>
           {categories.slice(1).map(cat=>{
             const list=tools.filter(t=>t.category===cat);
             if(!list.length)return null;
-            return <div className="tool-group" key={cat}><div className="category">{cat}<span>{list.length}</span></div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
+            return <details className="tool-group" key={cat}><summary className="category">{cat}<span>{list.length}</span><ChevronRight size={13}/></summary><div className="tool-group-items">{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div></details>
           })}
         </div>
         <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Local-first by default</strong><span>Core utilities run in your browser.</span></div></div><span className="version">DevBox · {tools.length} developer tools</span></div>
@@ -1480,11 +1480,11 @@ function App(){
           <div className="workspace-view"><div className="content">{content}</div></div>
         </>:<>
           <section className="hero">
-            <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> THE DEVELOPER WORKFLOW TOOLBOX</div><h1>Build faster.<br/><span>Stay in your workflow.</span></h1><p>Practical generators and workflow accelerators for shipping real applications. Build assets, configs, fixtures and code without jumping between sites.</p><div className="hero-meta"><span><Lock size={13}/> Local-first</span><span><ShieldCheck size={13}/> Privacy-minded</span><span><Zap size={13}/> Ready in seconds</span></div></div>
+            <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> THE DEVELOPER WORKFLOW TOOLBOX</div><h1>What are you<br/><span>building today?</span></h1><p>Find the right utility, open it, and get straight to work. Simple tools for everyday developer tasks — all in one workspace.</p><div className="hero-meta"><span><Lock size={13}/> Local-first</span><span><ShieldCheck size={13}/> Privacy-minded</span><span><Zap size={13}/> Ready in seconds</span></div></div>
             <div className="hero-stats"><div><strong>{tools.length}</strong><span>advanced tools</span></div><div><strong>0</strong><span>accounts needed</span></div></div>
           </section>
           <section className="catalog-section">
-            <div className="section-heading"><div><span className="section-kicker">TOOL DIRECTORY</span><h2>What do you need to get done?</h2><p className="catalog-subtitle">Choose a workflow or search by the task you have in mind.</p></div><span className="tool-count">{filtered.length} of {tools.length}</span></div>
+            <div className="section-heading"><div><span className="section-kicker">TOOL DIRECTORY</span><h2>Find the right tool for the job</h2><p className="catalog-subtitle">Browse by category or search for what you want to accomplish.</p></div><span className="tool-count">{filtered.length} of {tools.length}</span></div>
             {recentTools.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">PICK UP WHERE YOU LEFT OFF</span><h3>Recently used</h3></div><button className="subtle-link" onClick={()=>setWorkspaceOpen(true)}>View activity</button></div><div className="recent-row">{recentTools.map(t=><button className="recent-tool" key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={16}/><span>{t.name}</span><ChevronRight size={14}/></button>)}</div></section>}
             {favoriteTools.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">YOUR PINNED TOOLS</span><h3>Favorites</h3></div></div><div className="recent-row">{favoriteTools.slice(0,6).map(t=><button className="recent-tool" key={t.id} onClick={()=>selectTool(t.id)}><Star size={14} fill="currentColor"/><span>{t.name}</span><ChevronRight size={14}/></button>)}</div></section>}
             <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}<span>{c==="All"?tools.length:tools.filter(t=>t.category===c).length}</span></button>)}</div>
