@@ -11,6 +11,7 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - OpenAPI Workbench
 - HTTP Headers Inspector
 - URL Inspector & Builder
+- cURL Builder
 
 ### Data & database
 - Data Transform Studio (JSON, CSV and YAML)
@@ -18,9 +19,11 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - SQL Seed Data Generator
 - JSON Schema Generator
 - Mock Data Studio
+- JSON Diff
 
 ### Security & configuration
 - JWT Secret Generator
+- JWT Inspector
 - Hash & HMAC
 - Environment File Builder
 - .env Inspector
@@ -34,6 +37,7 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Regex Workbench
 - Diff & Merge
 - Cron Expression Studio
+- Regex Workbench
 - Unix Timestamp Converter
 - Color Converter
 
