@@ -914,7 +914,7 @@ function MarkdownStudio(){
   const [tab,setTab]=useState("split");
   const [copied,setCopied]=useState(false);
 
-  const escapeHtml=v=>v.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");
+  const escapeHtml=v=>String(v).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");
   const renderMarkdown=v=>{
     let html=escapeHtml(v);
     html=html.replace(/^### (.*)$/gm,"<h3>$1</h3>").replace(/^## (.*)$/gm,"<h2>$1</h2>").replace(/^# (.*)$/gm,"<h1>$1</h1>");
