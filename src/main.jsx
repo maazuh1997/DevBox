@@ -723,7 +723,7 @@ function SqlWorkbench(){
   const [copied,setCopied]=useState(false);
 
   const rewriteSql=(value,pretty)=>{
-    const keywords=["LEFT JOIN","RIGHT JOIN","FULL JOIN","INNER JOIN","CROSS JOIN","GROUP BY","ORDER BY","UNION ALL","UNION","SELECT","FROM","WHERE","HAVING","LIMIT","OFFSET","JOIN","ON","INSERT INTO","VALUES","UPDATE","SET","DELETE FROM","RETURNING","CREATE TABLE","ALTER TABLE","DROP TABLE"];
+    const keywords=["LEFT JOIN","RIGHT JOIN","FULL JOIN","INNER JOIN","CROSS JOIN","GROUP BY","ORDER BY","UNION ALL","UNION","SELECT","FROM","WHERE","HAVING","LIMIT","OFFSET","JOIN","ON","INSERT INTO","VALUES","UPDATE","SET","DELETE FROM","RETURNING","CREATE TABLE","ALTER TABLE","DROP TABLE","AND","OR"];
     let out="",i=0,quote=null,depth=0,pendingSpace=false;
     const flushSpace=()=>{if(pendingSpace&&out&&!out.endsWith("\n")&&!out.endsWith(" "))out+=" ";pendingSpace=false};
     while(i<value.length){
@@ -732,7 +732,7 @@ function SqlWorkbench(){
         out+=ch;i++;
         if(ch==="\\"){if(i<value.length)out+=value[i++];continue}
         if(ch===quote){
-          if(value[i]===quote&&value[i+1]===quote){out+=value[i+1];i+=2;continue}
+          if(value[i]===quote){out+=value[i];i++;continue}
           quote=null;
         }
         continue;
