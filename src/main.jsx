@@ -1072,6 +1072,7 @@ function DiffMergeWorkbench(){
 }
 function App(){
   const [active,setActive]=useState(getToolFromPath());
+  const [view,setView]=useState(getToolFromPath()==="json"?"catalog":"workspace");
   const [query,setQuery]=useState("");
   const [category,setCategory]=useState("All");
   const [mobile,setMobile]=useState(false);
@@ -1093,7 +1094,7 @@ function App(){
   useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";writeStorage("devbox-theme",dark?"dark":"light")},[dark]);
   useEffect(()=>setMeta(active),[active]);
   useEffect(()=>{
-    const onPop=()=>{setActive(getToolFromPath());setMobile(false);setQuery("");window.scrollTo({top:0,behavior:"auto"})};
+    const onPop=()=>{setActive(getToolFromPath());setView("workspace");setMobile(false);setQuery("");window.scrollTo({top:0,behavior:"auto"})};
     window.addEventListener("popstate",onPop);
     return()=>window.removeEventListener("popstate",onPop);
   },[]);
@@ -1116,6 +1117,7 @@ function App(){
   function selectTool(id){
     if(!tools.some(t=>t.id===id))return;
     setActive(id);
+    setView("workspace");
     navigateTo(id);
     setMobile(false);
     setQuery("");
@@ -1130,7 +1132,7 @@ function App(){
 
   return <div className="app">
     <header className="topbar">
-      <div className="brand"><div className="brand-mark"><Command size={19}/></div><span>Dev<span>Box</span></span><small>DEVELOPER TOOLKIT</small></div>
+      <button className="brand brand-button" onClick={()=>{setView("catalog");setCategory("All");setQuery("");window.scrollTo({top:0,behavior:"auto"})}} aria-label="Go to DevBox tools"><div className="brand-mark"><Command size={19}/></div><span>Dev<span>Box</span></span><small>DEVELOPER TOOLKIT</small></button>
       <div className="top-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search tools…"/><kbd>⌘ K</kbd></div>
       <div className="top-actions"><button className="icon-btn" title="Workspace" onClick={()=>setWorkspaceOpen(true)}><Clock3 size={16}/></button><button className="icon-btn" onClick={()=>setDark(!dark)} title="Toggle theme">{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" onClick={()=>setSettingsOpen(true)} title="Settings"><Settings size={18}/></button><button className="mobile-menu" onClick={()=>setMobile(!mobile)}>{mobile?<X/>:<Menu/>}</button></div>
     </header>
@@ -1151,15 +1153,18 @@ function App(){
       </aside>
       <main className="main">
         <div className="breadcrumb"><span>DevBox</span><ChevronRight size={14}/><strong>{current.name}</strong><button className="favorite-main" onClick={()=>toggleFav(current.id)}>{favorites.includes(current.id)?<Star fill="currentColor" size={17}/>:<Star size={17}/>}</button></div>
-        <section className="hero">
+        {view==="catalog"&&<section className="hero">
           <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> FAST · PRIVATE · BROWSER-FIRST</div><h1><span className="outline-word">DEV</span><br/>TOOLS<br/><span>REIMAGINED.</span></h1><p>One focused workspace for the utilities developers reach for every day. Fast, expressive and private by design.</p><div className="hero-actions"><button className="hero-cta" onClick={()=>selectTool("json")}>Explore tools <ChevronRight size={16}/></button><span><Lock size={13}/> No signup required</span></div></div>
           <div className="hero-stats"><div><strong>{tools.length}</strong><span>tools</span></div><div><strong>0</strong><span>required APIs</span></div><div><strong>100%</strong><span>browser-first</span></div></div>
-        </section>
-        <div className="section-heading"><div><span className="section-kicker">TOOLKIT</span><h2>Everything you need, one click away.</h2></div><span className="tool-count">{filtered.length} tools</span></div>
-        <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
-        <div className="quick-grid">{filtered.map(t=><button className={active===t.id?"quick active":"quick"} key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={17}/><span><strong>{t.name}</strong><small>{t.desc}</small></span><ChevronRight size={14}/></button>)}</div>
-        <div className="content">{content}</div>
-        <section className="seo-section">
+        </section>}
+        {view==="catalog"&&<div className="section-heading"><div><span className="section-kicker">TOOLKIT</span><h2>What are you working on?</h2><p className="catalog-subtitle">Search by task or choose a tool. Your recent and favorite tools stay close at hand.</p></div><span className="tool-count">{filtered.length} tools</span></div>}
+        {view==="catalog"?<>
+          {historyItems.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">PICK UP WHERE YOU LEFT OFF</span><h3>Recently used</h3></div></div><div className="recent-row">{historyItems.slice(0,5).map(item=>{const t=tools.find(x=>x.id===item.toolId);return t?<button className="recent-tool" key={item.toolId} onClick={()=>selectTool(t.id)}><t.icon size={16}/><span>{t.name}</span><ChevronRight size={14}/></button>:null})}</div></section>}
+          {favoriteTools.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">YOUR SHORTLIST</span><h3>Favorites</h3></div></div><div className="recent-row">{favoriteTools.slice(0,6).map(t=><button className="recent-tool" key={t.id} onClick={()=>selectTool(t.id)}><Star size={15} fill="currentColor"/><span>{t.name}</span><ChevronRight size={14}/></button>)}</div></section>}
+          <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
+          {filtered.length?<div className="quick-grid">{filtered.map(t=><button className="quick" key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={17}/><span><strong>{t.name}</strong><small>{t.desc}</small></span><ChevronRight size={14}/></button>)}</div>:<div className="catalog-empty"><Search size={22}/><h3>No tools match “{query}”</h3><p>Try a shorter search or choose another category.</p><button className="text-btn" onClick={()=>{setQuery("");setCategory("All")}}>Clear filters</button></div>}
+        </>:<div className="workspace-view"><div className="workspace-toolbar"><button className="back-to-tools" onClick={()=>{setView("catalog");setQuery("");setCategory("All")}}><ChevronRight size={15}/> Browse all tools</button><span className="workspace-category">{current.category}</span></div><div className="content">{content}</div></div>}
+        {view==="catalog"&&<section className="seo-section">
           <div>
             <span className="section-kicker">ABOUT THIS TOOL</span>
             <h2>{seo[current.id]?.title||current.name}</h2>
@@ -1170,7 +1175,7 @@ function App(){
             <div><Zap size={16}/><strong>Instant results</strong><span>Client-side processing means no round trip.</span></div>
             <div><ShieldCheck size={16}/><strong>Developer focused</strong><span>Simple inputs, clear outputs and useful actions.</span></div>
           </div>
-        </section>
+        </section>}
         <footer><span>© 2026 DevBox</span><span>Built for developers · Privacy first</span><span>All processing stays local where possible</span></footer>
       </main>
     </div>
