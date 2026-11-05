@@ -12,6 +12,8 @@ const tools = [
 {id:"base64-file",name:"Base64 File Encoder",desc:"Encode files and UTF-8 text or decode Base64 back into downloadable files",icon:Binary,category:"Developer Assets"},
 {id:"uuid-batch",name:"UUID Batch Generator",desc:"Generate secure UUID v4 identifiers in bulk with copy and export",icon:Fingerprint,category:"Security & Config"},
 {id:"url-inspector",name:"URL Inspector & Builder",desc:"Parse URL components and safely edit query parameters",icon:Link2,category:"Web & API"},
+{id:"webhook-sender",name:"Webhook Request Tester",desc:"Send HTTP requests to webhook endpoints and inspect responses",icon:Globe2,category:"API & Backend"},
+{id:"api-mock-builder",name:"API Mock Response Builder",desc:"Compose realistic JSON API responses with status and headers",icon:Braces,category:"Testing & Data"},
 {id:"image-compressor",name:"Image Compressor",desc:"Resize and compress images to optimized JPEG, PNG or WebP files",icon:Palette,category:"App & Asset Studio"},
 {id:"svg-optimizer",name:"SVG Optimizer",desc:"Clean, minify and inspect SVG markup before shipping",icon:Braces,category:"App & Asset Studio"},
 {id:"sql-seed",name:"SQL Seed Data Generator",desc:"Generate realistic INSERT statements for local development and tests",icon:Database,category:"Data & Database"},
@@ -411,7 +413,7 @@ const legacyToolAliases = {
   "code-formatter":"code-formatter", "hash-hmac":"hash-hmac", "headers-inspector":"headers-inspector",
   "diff-merge":"diff-merge", "env-workbench":"env-workbench"
 ,
-  "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector"
+  "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector", "webhook-sender":"webhook-sender", "api-mock-builder":"api-mock-builder"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||null}
 function getToolFromPath(){
@@ -1327,6 +1329,51 @@ function UrlInspectorTool(){
  </ToolShell>
 }
 
+
+function WebhookSender(){
+ const [url,setUrl]=useState("https://httpbin.org/post"),[method,setMethod]=useState("POST"),[headers,setHeaders]=useState('{"Content-Type":"application/json"}'),[body,setBody]=useState('{"event":"user.created","data":{"id":"usr_123","email":"dev@example.com"}}'),[timeout,setTimeoutMs]=useState("15000"),[result,setResult]=useState(null),[busy,setBusy]=useState(false);
+ async function send(){
+  setResult(null);let parsedHeaders;
+  try{parsedHeaders=JSON.parse(headers||"{}");if(!parsedHeaders||Array.isArray(parsedHeaders)||typeof parsedHeaders!=="object")throw Error("Headers must be a JSON object.");}
+  catch(e){setResult({error:"Invalid headers JSON: "+e.message});return}
+  try{const target=new URL(url);if(!["http:","https:"].includes(target.protocol))throw Error("Only HTTP and HTTPS URLs are supported.");}
+  catch(e){setResult({error:e.message||"Enter a valid absolute URL."});return}
+  const controller=new AbortController(),started=performance.now();const timer=window.setTimeout(()=>controller.abort(),Math.min(30000,Math.max(1000,Number(timeout)||15000)));
+  setBusy(true);
+  try{
+   const response=await fetch(url,{method,headers:parsedHeaders,body:["GET","HEAD"].includes(method)?undefined:body,signal:controller.signal});
+   const textBody=await response.text();let formatted=textBody;try{formatted=JSON.stringify(JSON.parse(textBody),null,2)}catch{}
+   setResult({status:response.status,statusText:response.statusText,ok:response.ok,elapsed:Math.round(performance.now()-started),headers:[...response.headers.entries()],body:formatted});
+  }catch(e){setResult({error:e.name==="AbortError"?"Request timed out.":e.message+" — the target may block browser requests with CORS."})}
+  finally{window.clearTimeout(timer);setBusy(false)}
+ }
+ const output=result?JSON.stringify(result,null,2):"";
+ return <ToolShell title="Webhook Request Tester" subtitle="Send an HTTP request to a webhook or API endpoint and inspect its response." value={output} onClear={()=>setResult(null)}>
+  <div className="generator-fields"><label className="action-field">METHOD<select value={method} onChange={e=>setMethod(e.target.value)}>{["GET","POST","PUT","PATCH","DELETE","HEAD"].map(m=><option key={m}>{m}</option>)}</select></label><label className="action-field full-width">REQUEST URL<input value={url} onChange={e=>setUrl(e.target.value)} placeholder="https://your-service.com/webhook"/></label></div>
+  <Editor label="HEADERS · JSON OBJECT" value={headers} onChange={setHeaders} />
+  {!["GET","HEAD"].includes(method)&&<Editor label="REQUEST BODY" value={body} onChange={setBody}/>}
+  <div className="control-row"><label>TIMEOUT <select value={timeout} onChange={e=>setTimeoutMs(e.target.value)}><option value="5000">5 seconds</option><option value="10000">10 seconds</option><option value="15000">15 seconds</option><option value="30000">30 seconds</option></select></label><button className="primary" disabled={busy||!url.trim()} onClick={send}>{busy?"Sending…":"Send request"} <Zap size={15}/></button></div>
+  {result&&<Panel label="RESPONSE" status={result.error?"Request failed":String(result.status)+" "+result.statusText} statusGood={result.ok}>{result.error?<pre className="error">{result.error}</pre>:<><div className="jwt-status"><div><span>HTTP STATUS</span><strong>{result.status}</strong></div><div><span>DURATION</span><strong>{result.elapsed} ms</strong></div><div><span>RESULT</span><strong>{result.ok?"Success":"HTTP error"}</strong></div></div><h4>Response headers</h4><pre className="code">{result.headers.map(([k,v])=>k+": "+v).join("\\n")||"(none exposed)"}</pre><h4>Response body</h4><pre className="code wrap">{result.body||"(empty response)"}</pre></>}</Panel>}
+  <p className="data-note" style={{padding:"0 16px 14px"}}>Browser limitation: cross-origin requests require the endpoint to allow your site's origin through CORS. This tool cannot receive inbound public webhooks or bypass CORS. Do not send production secrets to untrusted endpoints.</p>
+ </ToolShell>
+}
+function ApiMockBuilder(){
+ const [status,setStatus]=useState("200"),[delay,setDelay]=useState("0"),[headers,setHeaders]=useState('{"Content-Type":"application/json","Cache-Control":"no-store"}'),[body,setBody]=useState('{"success":true,"message":"Request completed","data":{"id":"item_001","name":"Sample item","active":true},"meta":{"page":1,"total":1}}'),[envelope,setEnvelope]=useState(false),[error,setError]=useState("");
+ let parsed=null,headerObject=null;
+ try{parsed=JSON.parse(body);if(envelope)parsed={status:Number(status),delayMs:Number(delay),data:parsed};}catch(e){error="Response body is not valid JSON: "+e.message}
+ try{headerObject=JSON.parse(headers);if(!headerObject||Array.isArray(headerObject)||typeof headerObject!=="object")throw Error("Headers must be a JSON object.");}catch(e){error=error||"Headers are invalid: "+e.message}
+ const output=error?"":JSON.stringify({status:Number(status),headers:headerObject,body:parsed},null,2);
+ return <ToolShell title="API Mock Response Builder" subtitle="Create reusable mock API response fixtures for frontend development and automated tests." value={output} onClear={()=>{setBody("{}");setError("")}}>
+  <div className="generator-fields"><label className="action-field">HTTP STATUS<select value={status} onChange={e=>setStatus(e.target.value)}>{["200","201","202","204","400","401","403","404","409","422","429","500","503"].map(n=><option key={n}>{n}</option>)}</select></label><label className="action-field">SIMULATED DELAY<select value={delay} onChange={e=>setDelay(e.target.value)}><option value="0">No delay</option><option value="250">250 ms</option><option value="500">500 ms</option><option value="1000">1 second</option><option value="2000">2 seconds</option></select></label></div>
+  <Editor label="RESPONSE BODY · JSON" value={body} onChange={setBody}/>
+  <Editor label="RESPONSE HEADERS · JSON" value={headers} onChange={setHeaders}/>
+  <label className="check" style={{padding:"8px 16px"}}><input type="checkbox" checked={envelope} onChange={e=>setEnvelope(e.target.checked)}/> Wrap body with status and delay metadata</label>
+  {error?<div className="alert error-box" style={{margin:16}}>{error}</div>:<Panel label="MOCK RESPONSE FIXTURE" status="Valid JSON" statusGood><pre className="code">{output}</pre></Panel>}
+  <div className="sample-toolbar" style={{padding:14}}><button className="primary" disabled={!!error} onClick={()=>downloadText("api-mock-response.json",output)}><Download size={14}/> Download JSON fixture</button></div>
+  <p className="data-note" style={{padding:"0 16px 14px"}}>Exports a fixture only; it does not start a network server or intercept real API traffic. Use the generated JSON in your mock service or test setup.</p>
+ </ToolShell>
+}
+
 function App(){
   const initialTool=getToolFromPath();
   const [active,setActive]=useState(initialTool||"json");
@@ -1391,7 +1438,7 @@ function App(){
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>}[active]||<AppIconStudio/>;
+  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">
@@ -1424,7 +1471,7 @@ function App(){
             return <div className="tool-group" key={cat}><div className="category">{cat}<span>{list.length}</span></div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
           })}
         </div>
-        <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Local-first by default</strong><span>Core utilities run in your browser.</span></div></div><span className="version">DevBox · 31 developer tools</span></div>
+        <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Local-first by default</strong><span>Core utilities run in your browser.</span></div></div><span className="version">DevBox · {tools.length} developer tools</span></div>
       </aside>
       <main className="main">
         {view==="workspace"?<>
