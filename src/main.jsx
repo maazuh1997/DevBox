@@ -1092,6 +1092,7 @@ function App(){
   const content={
     json:<JsonTool/>,jwt:<JwtTool/>,uuid:<UuidTool/>,base64:<Base64Tool/>,hash:<HashTool/>,regex:<RegexTool/>,timestamp:<TimestampTool/>,url:<UrlTool/>,qr:<QrTool/>,color:<ColorTool/>,http:<HttpTool/>,markdown:<MarkdownTool/>,sql:<SqlTool/>,
     "json-diff":<JsonDiffTool/>,"regex-workbench":<RegexWorkbench/>,"hash-generator":<HashWorkbench/>,"curl-builder":<CurlWorkbench/>,"http-client":<HttpClientWorkbench/>,
+    "sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"jwt-inspector":<JwtInspector/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,
     "env-workbench":<EnvWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>
   }[active]||<JsonTool/>;
 
