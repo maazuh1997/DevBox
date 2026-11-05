@@ -408,7 +408,7 @@ const legacyToolAliases = {
   "code-formatter":"code-formatter", "hash-hmac":"hash-hmac", "headers-inspector":"headers-inspector",
   "diff-merge":"diff-merge", "env-workbench":"env-workbench"
 ,
-  "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder"
+  "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||null}
 function getToolFromPath(){
@@ -1240,7 +1240,7 @@ function SvgOptimizer(){
  function optimize(){setError("");setOutput("");setStats(null);try{
  if(!input.trim())throw Error("Paste SVG markup or load an .svg file first.");const doc=new DOMParser().parseFromString(input,"image/svg+xml");if(doc.querySelector("parsererror"))throw Error("The SVG markup is not valid XML.");
  const root=doc.documentElement;if(root.localName!=="svg")throw Error("The document root must be an SVG element.");
- doc.querySelectorAll("script,foreignObject,metadata,title,desc").forEach(n=>n.remove());doc.querySelectorAll("*").forEach(el=>[...el.attributes].forEach(attr=>{if(/^on/i.test(attr.name)||/javascript\s*:/i.test(attr.value))el.removeAttribute(attr.name)}));
+ doc.querySelectorAll("script,foreignObject,metadata,title,desc").forEach(n=>n.remove());[root,...doc.querySelectorAll("*")].forEach(el=>[...el.attributes].forEach(attr=>{if(/^on/i.test(attr.name)||/javascript\s*:/i.test(attr.value))el.removeAttribute(attr.name)}));
  const walker=doc.createTreeWalker(root,NodeFilter.SHOW_COMMENT),comments=[];while(walker.nextNode())comments.push(walker.currentNode);comments.forEach(n=>n.remove());
  let xml=new XMLSerializer().serializeToString(root).replace(/>\s+</g,"><").replace(/\s{2,}/g," ").trim();if(!/xmlns=/.test(xml))xml=xml.replace("<svg","<svg xmlns=\"http://www.w3.org/2000/svg\"");
  setOutput(xml);setStats({before:new Blob([input]).size,after:new Blob([xml]).size});
