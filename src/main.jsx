@@ -18,7 +18,18 @@ const tools = [
 {id:"mock-data",name:"Mock Data Studio",desc:"Generate schema-driven JSON and CSV test data",icon:Binary,category:"Testing & Data"},
 {id:"api-scaffold",name:"API Scaffold Generator",desc:"Generate Express route and controller starter code",icon:Globe2,category:"Code Generation"},
 {id:"cron-builder",name:"Cron Expression Studio",desc:"Build cron expressions with readable descriptions",icon:Clock3,category:"Developer Workflow"},
-{id:"json-schema",name:"JSON Schema Generator",desc:"Infer reusable JSON Schema from sample payloads",icon:Braces,category:"Code Generation"}
+{id:"json-schema",name:"JSON Schema Generator",desc:"Infer reusable JSON Schema from sample payloads",icon:Braces,category:"Code Generation"},
+{id:"http-client",name:"HTTP API Workbench",desc:"Build requests, headers, auth, query params and inspect API responses",icon:Globe2,category:"API & Backend"},
+{id:"sql-workbench",name:"SQL Workbench",desc:"Format SQL and work with query and schema notes",icon:Database,category:"Data & Database"},
+{id:"json-typescript",name:"JSON to TypeScript",desc:"Generate typed interfaces from real JSON samples",icon:Braces,category:"Code Generation"},
+{id:"openapi-workbench",name:"OpenAPI Workbench",desc:"Explore API endpoints and generate cURL snippets from specs",icon:FileText,category:"API & Backend"},
+{id:"data-transform",name:"Data Transform Studio",desc:"Convert JSON, CSV and YAML with browser-local processing",icon:Binary,category:"Data & Database"},
+{id:"markdown-studio",name:"Markdown Studio",desc:"Write technical docs with a live preview",icon:FileText,category:"Documentation"},
+{id:"code-formatter",name:"Code Formatter",desc:"Format and minify common code snippets",icon:Braces,category:"Code Generation"},
+{id:"hash-hmac",name:"Hash & HMAC",desc:"Generate SHA digests and HMAC signatures using Web Crypto",icon:Fingerprint,category:"Security & Config"},
+{id:"headers-inspector",name:"HTTP Headers Inspector",desc:"Inspect response headers and common security headers",icon:ShieldCheck,category:"API & Backend"},
+{id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text or JSON documents",icon:Binary,category:"Developer Workflow"},
+{id:"env-workbench",name:".env Inspector",desc:"Validate environment variables and mask sensitive values",icon:Lock,category:"Security & Config"}
 ];
 
 
@@ -67,7 +78,7 @@ function downloadText(name, text){
     // Downloads are best-effort in restricted browser contexts.
   }finally{
     a.remove();
-    // Keep the object URL alive until the browser has consumed the download.
+    if(url) window.setTimeout(()=>URL.revokeObjectURL(url), 1000);
   }
 }
 
@@ -381,7 +392,14 @@ const legacyToolAliases = {
   uuid:"uuid", base64:"base64", timestamp:"timestamp", url:"url", color:"color",
   json:"json", "curl-builder":"curl-builder", "headers-inspector":"headers-inspector",
   "data-transform":"data-transform", "openapi-workbench":"openapi-workbench",
-  "code-formatter":"code-formatter", "env-workbench":"env-workbench", "diff-merge":"diff-merge"
+  "code-formatter":"code-formatter", "env-workbench":"env-workbench", "diff-merge":"diff-merge",
+  "app-icon-studio":"app-icon-studio", "jwt-secret":"jwt-secret", "sample-files":"sample-files",
+  "env-generator":"env-generator", "docker-compose":"docker-compose", "gitignore-builder":"gitignore-builder",
+  "mock-data":"mock-data", "api-scaffold":"api-scaffold", "cron-builder":"cron-builder", "json-schema":"json-schema",
+  "http-client":"http-client", "sql-workbench":"sql-workbench", "json-typescript":"json-typescript",
+  "openapi-workbench":"openapi-workbench", "data-transform":"data-transform", "markdown-studio":"markdown-studio",
+  "code-formatter":"code-formatter", "hash-hmac":"hash-hmac", "headers-inspector":"headers-inspector",
+  "diff-merge":"diff-merge", "env-workbench":"env-workbench"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||null}
 function getToolFromPath(){
@@ -1166,7 +1184,7 @@ function App(){
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>}[active]||<AppIconStudio/>;
+  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">
