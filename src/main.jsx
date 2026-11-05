@@ -517,10 +517,15 @@ function CurlWorkbench(){
   const [headers,setHeaders]=useState([{key:"Accept",value:"application/json"}]);
   const [body,setBody]=useState("");
   const curl=useMemo(()=>{
-    let s=`curl -X ${method} '${url}'`;
-    headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H '${h.key}: ${h.value}'`);
-    if(body.trim())s+=` \\\n  --data '${body.replace(/'/g,"'\\\\''")}'`;
-    return s;
+    const quote=value=>"'"+String(value).replace(/'/g,"'\\''")+"'";
+    try{
+      const parsed=new URL(url);
+      if(!["http:","https:"].includes(parsed.protocol)||parsed.username||parsed.password)throw new Error();
+      let s=`curl -X ${method} ${quote(parsed.toString())}`;
+      headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H ${quote(`${h.key}: ${h.value}`)}`);
+      if(body.trim())s+=` \\\n  --data ${quote(body)}`;
+      return s;
+    }catch{return "Enter a valid HTTP(S) URL without embedded credentials."}
   },[method,url,headers,body]);
   return <ToolShell title="cURL Builder" subtitle="Build readable cURL requests and copy them into your terminal or scripts.">
     <div className="workbench">
