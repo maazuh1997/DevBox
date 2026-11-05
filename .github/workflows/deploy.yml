@@ -27,8 +27,6 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
-      - name: Apply routing fix to build
-        run: python3 scripts/professional_route_patch.py
       - name: Build
         run: npm run build
       - name: Enable GitHub Pages SPA fallback
