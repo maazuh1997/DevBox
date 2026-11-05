@@ -788,7 +788,7 @@ function JsonTypeGenerator(){
 }
 
 function OpenApiWorkbench(){
-  const sample=\`{
+  const sample=`{
   "openapi": "3.0.3",
   "info": {"title": "Sample API", "version": "1.0.0"},
   "servers": [{"url": "https://api.example.com"}],
@@ -801,7 +801,7 @@ function OpenApiWorkbench(){
       "get": {"summary": "Get user", "parameters": [{"name":"id","in":"path","required":true,"schema":{"type":"string"}}], "responses": {"200":{"description":"OK"}}}
     }
   }
-}\`;
+}`;
   const [source,setSource]=useState(sample);
   const [tab,setTab]=useState("endpoints");
   const [selected,setSelected]=useState(null);
