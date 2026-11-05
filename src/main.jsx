@@ -9,19 +9,28 @@ import {
 import "./styles.css";
 
 const tools = [
-  {id:"json", name:"JSON Formatter", desc:"Format, validate and minify JSON", icon:Braces, category:"Formatters"},
-  {id:"jwt", name:"JWT Decoder", desc:"Inspect JWT header and payload", icon:KeyRound, category:"Security"},
-  {id:"uuid", name:"UUID Generator", desc:"Generate secure random UUIDs", icon:Fingerprint, category:"Generators"},
-  {id:"base64", name:"Base64", desc:"Encode and decode Base64 text", icon:Binary, category:"Encoding"},
-  {id:"hash", name:"Hash Generator", desc:"Create SHA-256, SHA-384 and SHA-512 hashes", icon:Hash, category:"Security"},
-  {id:"regex", name:"Regex Tester", desc:"Test regular expressions instantly", icon:Regex, category:"Text"},
-  {id:"timestamp", name:"Timestamp Converter", desc:"Convert Unix timestamps and dates", icon:Clock3, category:"Converters"},
-  {id:"url", name:"URL Encoder", desc:"Encode, decode and inspect URLs", icon:Link2, category:"Encoding"},
-  {id:"qr", name:"QR Generator", desc:"Create QR codes locally", icon:QrCode, category:"Generators"},
-  {id:"color", name:"Color Converter", desc:"Convert HEX, RGB and HSL colors", icon:Palette, category:"Converters"},
-  {id:"http", name:"HTTP Tester", desc:"Send requests from your browser", icon:Globe2, category:"Network"},
-  {id:"markdown", name:"Markdown", desc:"Preview and format Markdown", icon:FileText, category:"Text"},
-  {id:"sql", name:"SQL Formatter", desc:"Clean up SQL queries", icon:Database, category:"Formatters"},{id:"json-diff",name:"JSON Diff",desc:"Compare JSON documents side by side.",category:"Formatters",icon:Braces},{id:"regex-workbench",name:"Regex Workbench",desc:"Live matches, groups and replacement preview.",category:"Text",icon:Regex},{id:"hash-generator",name:"Hash Generator",desc:"SHA hashes for text, locally in your browser.",category:"Security",icon:Hash},{id:"curl-builder",name:"cURL Builder",desc:"Build and copy production-ready cURL commands.",category:"Network",icon:Globe2},{id:"http-client",name:"HTTP Client",desc:"Build, send and inspect HTTP requests.",category:"Network",icon:Globe2},{id:"sql-workbench",name:"SQL Workbench",desc:"Format and inspect SQL locally.",category:"Database",icon:Database},{id:"json-typescript",name:"JSON → TypeScript",desc:"Generate TypeScript interfaces from JSON.",category:"Code Generation",icon:Braces},{id:"openapi-workbench",name:"OpenAPI Workbench",desc:"Explore and inspect OpenAPI specifications.",category:"API",icon:Globe2},{id:"data-transform",name:"Data Transform",desc:"Convert YAML, JSON and CSV locally.",category:"Data",icon:Globe2},{id:"jwt-inspector",name:"JWT Inspector",desc:"Decode JWT headers and claims.",category:"Security",icon:Globe2},{id:"markdown-studio",name:"Markdown Studio",desc:"Write and preview Markdown.",category:"Documentation",icon:Globe2},{id:"code-formatter",name:"Code Formatter",desc:"Format and minify code locally.",category:"Code",icon:Globe2},{id:"env-workbench",name:".env Workbench",desc:"Inspect and validate environment variables.",icon:Lock,category:"Security"},{id:"hash-hmac",name:"Hash & HMAC",desc:"Generate SHA hashes and HMAC signatures.",icon:Hash,category:"Security"},{id:"headers-inspector",name:"Headers Inspector",desc:"Inspect HTTP and security headers.",icon:Globe2,category:"Network"},{id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text or JSON.",icon:FileText,category:"Text"}];
+  {id:"json",name:"JSON Formatter",desc:"Format, validate, minify and inspect JSON",icon:Braces,category:"Formatters"},
+  {id:"json-diff",name:"JSON Diff",desc:"Compare JSON documents and inspect changes",icon:Braces,category:"JSON"},
+  {id:"json-typescript",name:"JSON → TypeScript",desc:"Generate TypeScript types from sample JSON",icon:Braces,category:"Code"},
+  {id:"jwt-inspector",name:"JWT Inspector",desc:"Decode claims and inspect token metadata",icon:KeyRound,category:"Security"},
+  {id:"uuid",name:"UUID Generator",desc:"Generate cryptographically secure UUIDs",icon:Fingerprint,category:"Generators"},
+  {id:"base64",name:"Base64 Encoder",desc:"Encode and decode UTF-8 Base64 content",icon:Binary,category:"Encoding"},
+  {id:"hash-hmac",name:"Hash & HMAC",desc:"Create secure digests and keyed signatures",icon:Hash,category:"Security"},
+  {id:"regex-workbench",name:"Regex Workbench",desc:"Test patterns, capture groups and replacements",icon:Regex,category:"Text"},
+  {id:"timestamp",name:"Timestamp Converter",desc:"Convert Unix timestamps and readable dates",icon:Clock3,category:"Converters"},
+  {id:"url",name:"URL Encoder",desc:"Encode, decode and inspect URL components",icon:Link2,category:"Encoding"},
+  {id:"color",name:"Color Converter",desc:"Convert HEX, RGB and HSL values",icon:Palette,category:"Converters"},
+  {id:"http-client",name:"HTTP Client",desc:"Compose requests and inspect responses",icon:Globe2,category:"API & Network"},
+  {id:"curl-builder",name:"cURL Builder",desc:"Build safe, copy-ready cURL commands",icon:Globe2,category:"API & Network"},
+  {id:"headers-inspector",name:"Headers Inspector",desc:"Inspect HTTP response and security headers",icon:ShieldCheck,category:"API & Network"},
+  {id:"markdown-studio",name:"Markdown Studio",desc:"Write Markdown with a live preview",icon:FileText,category:"Text"},
+  {id:"sql-workbench",name:"SQL Workbench",desc:"Format and inspect SQL queries",icon:Database,category:"Data"},
+  {id:"data-transform",name:"Data Transform",desc:"Convert JSON, YAML and CSV data",icon:Binary,category:"Data"},
+  {id:"openapi-workbench",name:"OpenAPI Workbench",desc:"Explore and validate API specifications",icon:Globe2,category:"API & Network"},
+  {id:"code-formatter",name:"Code Formatter",desc:"Format and minify supported code",icon:Braces,category:"Code"},
+  {id:"env-workbench",name:".env Workbench",desc:"Inspect and validate environment variables",icon:Lock,category:"Security"},
+  {id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text documents",icon:FileText,category:"Text"}
+];
 
 
 // Storage is optional: browsers can deny access in private/restricted contexts.
@@ -372,15 +381,29 @@ function setMeta(toolId){
   desc.content=meta.description;
 }
 
+const legacyToolAliases = {
+  jwt:"jwt-inspector", "jwt-inspector":"jwt-inspector",
+  hash:"hash-hmac", "hash-generator":"hash-hmac", "hash-hmac":"hash-hmac",
+  regex:"regex-workbench", "regex-workbench":"regex-workbench",
+  http:"http-client", "http-client":"http-client",
+  markdown:"markdown-studio", "markdown-studio":"markdown-studio",
+  sql:"sql-workbench", "sql-workbench":"sql-workbench",
+  "json-typescript":"json-typescript", "json-diff":"json-diff",
+  uuid:"uuid", base64:"base64", timestamp:"timestamp", url:"url", color:"color",
+  json:"json", "curl-builder":"curl-builder", "headers-inspector":"headers-inspector",
+  "data-transform":"data-transform", "openapi-workbench":"openapi-workbench",
+  "code-formatter":"code-formatter", "env-workbench":"env-workbench", "diff-merge":"diff-merge"
+};
+function canonicalToolId(id){return legacyToolAliases[id]||null}
 function getToolFromPath(){
   const path=String(window.location.pathname||"");
   const base="/DevBox/";
-  const relative=path.indexOf(base)===0?path.slice(base.length):path.replace(/^\/+/,"");
+  const relative=path.indexOf(base)===0?path.slice(base.length):path.replace(/^\\/+/, "");
   const parts=relative.split("/").filter(Boolean);
   const slug=parts[0]==="tools"?parts[1]:null;
-  return tools.some(t=>t.id===slug)?slug:null;
+  const canonical=canonicalToolId(slug);
+  return tools.some(t=>t.id===canonical)?canonical:null;
 }
-
 function navigateTo(id){
   const next=id?`/DevBox/tools/${id}`:"/DevBox/";
   window.history.pushState({devboxTool:id||null},"",next);
@@ -1071,8 +1094,9 @@ function DiffMergeWorkbench(){
   </ToolShell>
 }
 function App(){
-  const [active,setActive]=useState(getToolFromPath());
-  const [view,setView]=useState(getToolFromPath()==="json"?"catalog":"workspace");
+  const initialTool=getToolFromPath();
+  const [active,setActive]=useState(initialTool||"json");
+  const [view,setView]=useState(initialTool?"workspace":"catalog");
   const [query,setQuery]=useState("");
   const [category,setCategory]=useState("All");
   const [mobile,setMobile]=useState(false);
@@ -1080,109 +1104,128 @@ function App(){
   const [historyItems,setHistoryItems]=useState(()=>{
     try{
       const value=JSON.parse(readStorage("devbox-history","[]"));
-      return Array.isArray(value)?value:[];
-    }catch(e){return []}
+      return Array.isArray(value)?value.map(item=>({...item,toolId:canonicalToolId(item.toolId)})).filter(item=>item.toolId):[];
+    }catch{return []}
   });
   const [settingsOpen,setSettingsOpen]=useState(false);
   const [dark,setDark]=useState(readStorage("devbox-theme")!=="light");
   const [favorites,setFavorites]=useState(()=>{
     try{
       const value=JSON.parse(readStorage("devbox-favorites","[]"));
-      return Array.isArray(value)?value:[];
-    }catch(e){return []}
+      return Array.isArray(value)?[...new Set(value.map(canonicalToolId).filter(Boolean))]:[];
+    }catch{return []}
   });
   useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";writeStorage("devbox-theme",dark?"dark":"light")},[dark]);
   useEffect(()=>setMeta(active),[active]);
   useEffect(()=>{
-    const onPop=()=>{setActive(getToolFromPath());setView("workspace");setMobile(false);setQuery("");window.scrollTo({top:0,behavior:"auto"})};
+    const onPop=()=>{
+      const next=getToolFromPath();
+      setActive(next||"json");
+      setView(next?"workspace":"catalog");
+      setMobile(false);
+      setQuery("");
+      window.scrollTo({top:0,behavior:"auto"});
+    };
     window.addEventListener("popstate",onPop);
     return()=>window.removeEventListener("popstate",onPop);
   },[]);
   useEffect(()=>writeStorage("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
-  const addHistory=item=>setHistoryItems(prev=>[{...item,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
+  const addHistory=item=>setHistoryItems(prev=>[{...item,toolId:canonicalToolId(item.toolId)||item.toolId,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==item.toolId)].slice(0,40));
   useEffect(()=>{window.__devboxAddHistory=addHistory;return()=>delete window.__devboxAddHistory},[]);
   useEffect(()=>writeStorage("devbox-favorites",JSON.stringify(favorites)),[favorites]);
   useEffect(()=>{
     const handler=e=>{
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.querySelector(".top-search input")?.focus()}
-      if(e.key==="Escape")document.querySelector(".top-search input")?.blur()
+      if(e.key==="Escape"){setQuery("");document.querySelector(".top-search input")?.blur();setMobile(false)}
     };
     window.addEventListener("keydown",handler);
     return()=>window.removeEventListener("keydown",handler);
   },[]);
   const filtered=tools.filter(t=>(category==="All"||t.category===category)&&(t.name+" "+t.desc+" "+t.category).toLowerCase().includes(query.toLowerCase()));
+  const searchResults=query.trim()?tools.filter(t=>(t.name+" "+t.desc+" "+t.category).toLowerCase().includes(query.toLowerCase())).slice(0,7):[];
   const current=tools.find(t=>t.id===active)||tools[0];
   const favoriteTools=tools.filter(t=>favorites.includes(t.id));
+  const recentTools=historyItems.map(item=>tools.find(t=>t.id===item.toolId)).filter((t,i,a)=>t&&a.findIndex(x=>x.id===t.id)===i).slice(0,5);
   function toggleFav(id){setFavorites(f=>f.includes(id)?f.filter(x=>x!==id):[...f,id])}
+  function showCatalog(){
+    setActive("json");setView("catalog");setCategory("All");setQuery("");setMobile(false);
+    navigateTo(null);window.scrollTo({top:0,behavior:"smooth"});
+  }
   function selectTool(id){
-    if(!tools.some(t=>t.id===id))return;
-    setActive(id);
-    setView("workspace");
-    navigateTo(id);
-    setMobile(false);
-    setQuery("");
-    window.scrollTo({top:0,behavior:"auto"});
+    const canonical=canonicalToolId(id);
+    if(!tools.some(t=>t.id===canonical))return;
+    setActive(canonical);setView("workspace");setMobile(false);setQuery("");
+    navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
   const content={
-    json:<JsonTool/>,jwt:<JwtTool/>,uuid:<UuidTool/>,base64:<Base64Tool/>,hash:<HashTool/>,regex:<RegexTool/>,timestamp:<TimestampTool/>,url:<UrlTool/>,qr:<QrTool/>,color:<ColorTool/>,http:<HttpTool/>,markdown:<MarkdownTool/>,sql:<SqlTool/>,
-    "json-diff":<JsonDiffTool/>,"regex-workbench":<RegexWorkbench/>,"hash-generator":<HashWorkbench/>,"curl-builder":<CurlWorkbench/>,"http-client":<HttpClientWorkbench/>,
-    "sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"jwt-inspector":<JwtInspector/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,
-    "env-workbench":<EnvWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>
+    json:<JsonTool/>,"json-diff":<JsonDiffTool/>,"json-typescript":<JsonTypeGenerator/>,
+    "jwt-inspector":<JwtInspector/>,uuid:<UuidTool/>,base64:<Base64Tool/>,"hash-hmac":<HashHmacWorkbench/>,
+    "regex-workbench":<RegexWorkbench/>,timestamp:<TimestampTool/>,url:<UrlTool/>,color:<ColorTool/>,
+    "http-client":<HttpClientWorkbench/>,"curl-builder":<CurlWorkbench/>,"headers-inspector":<HeadersInspector/>,
+    "markdown-studio":<MarkdownStudio/>,"sql-workbench":<SqlWorkbench/>,"data-transform":<DataTransformWorkbench/>,
+    "openapi-workbench":<OpenApiWorkbench/>,"code-formatter":<CodeFormatterWorkbench/>,
+    "env-workbench":<EnvWorkbench/>,"diff-merge":<DiffMergeWorkbench/>
   }[active]||<JsonTool/>;
 
   return <div className="app">
     <header className="topbar">
-      <button className="brand brand-button" onClick={()=>{setView("catalog");setCategory("All");setQuery("");window.scrollTo({top:0,behavior:"auto"})}} aria-label="Go to DevBox tools"><div className="brand-mark"><Command size={19}/></div><span>Dev<span>Box</span></span><small>DEVELOPER TOOLKIT</small></button>
-      <div className="top-search"><Search size={17}/><input value={query} onChange={e=>setQuery(e.target.value)} placeholder="Search tools…"/><kbd>⌘ K</kbd></div>
-      <div className="top-actions"><button className="icon-btn" title="Workspace" onClick={()=>setWorkspaceOpen(true)}><Clock3 size={16}/></button><button className="icon-btn" onClick={()=>setDark(!dark)} title="Toggle theme">{dark?<Sun size={18}/>:<Moon size={18}/>}</button><button className="icon-btn" onClick={()=>setSettingsOpen(true)} title="Settings"><Settings size={18}/></button><button className="mobile-menu" onClick={()=>setMobile(!mobile)}>{mobile?<X/>:<Menu/>}</button></div>
+      <button className="brand brand-button" onClick={showCatalog} aria-label="Go to DevBox home"><div className="brand-mark"><Command size={18}/></div><span>Dev<span>Box</span></span><small>DEVELOPER WORKSPACE</small></button>
+      <div className="top-search">
+        <Search size={17}/>
+        <input value={query} onChange={e=>setQuery(e.target.value)} onFocus={()=>{if(view==="catalog")setCategory("All")}} placeholder="Search 21 developer tools…" aria-label="Search developer tools"/>
+        <kbd>⌘ K</kbd>
+        {searchResults.length>0&&<div className="search-results">{searchResults.map(t=><button key={t.id} onMouseDown={e=>e.preventDefault()} onClick={()=>selectTool(t.id)}><span className="search-result-icon"><t.icon size={16}/></span><span><strong>{t.name}</strong><small>{t.category} · {t.desc}</small></span><ChevronRight size={15}/></button>)}</div>}
+        {query.trim()&&!searchResults.length&&<div className="search-results search-empty"><span>No matching tools</span><button onClick={()=>setQuery("")}>Clear search</button></div>}
+      </div>
+      <div className="top-actions">
+        <button className="icon-btn" title="Recent tools" aria-label="Recent tools" onClick={()=>setWorkspaceOpen(true)}><Clock3 size={17}/></button>
+        <button className="icon-btn" onClick={()=>setDark(!dark)} title={dark?"Switch to light theme":"Switch to dark theme"} aria-label="Toggle theme">{dark?<Sun size={18}/>:<Moon size={18}/>}</button>
+        <button className="icon-btn" onClick={()=>setSettingsOpen(true)} title="Settings" aria-label="Settings"><Settings size={18}/></button>
+        <button className="mobile-menu" onClick={()=>setMobile(!mobile)} aria-label={mobile?"Close navigation":"Open navigation"}>{mobile?<X/>:<Menu/>}</button>
+      </div>
     </header>
     <div className="layout">
       {mobile&&<button className="sidebar-overlay" aria-label="Close navigation" onClick={()=>setMobile(false)}></button>}
       <aside className={mobile?"sidebar open":"sidebar"}>
         <div className="sidebar-scroll">
-        <div className="side-label">WORKSPACE</div>
-        <button className="home-btn" onClick={()=>selectTool("json")}><Sparkles size={17}/> All tools <span>{tools.length}</span></button>
-        {favoriteTools.length>0&&<><div className="side-label">FAVORITES</div>{favoriteTools.map(t=><SideItem key={t.id} tool={t} active={active===t.id} onClick={()=>selectTool(t.id)} fav onFav={()=>toggleFav(t.id)}/>)}</>}
-        <div className="side-label">TOOLS</div>
-        {categories.slice(1).map(cat=>{
-          const list=filtered.filter(t=>t.category===cat); if(!list.length)return null;
-          return <div className="tool-group" key={cat}><div className="category">{cat}</div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
-        })}
+          <div className="side-label">WORKSPACE</div>
+          <button className={view==="catalog"?"home-btn active":"home-btn"} onClick={showCatalog}><Sparkles size={16}/> Discover tools <span>{tools.length}</span></button>
+          {favoriteTools.length>0&&<><div className="side-label">PINNED</div>{favoriteTools.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav onFav={()=>toggleFav(t.id)}/>)}</>}
+          <div className="side-label">BROWSE BY CATEGORY</div>
+          {categories.slice(1).map(cat=>{
+            const list=tools.filter(t=>t.category===cat);
+            if(!list.length)return null;
+            return <div className="tool-group" key={cat}><div className="category">{cat}<span>{list.length}</span></div>{list.map(t=><SideItem key={t.id} tool={t} active={active===t.id&&view==="workspace"} onClick={()=>selectTool(t.id)} fav={favorites.includes(t.id)} onFav={()=>toggleFav(t.id)}/>)}</div>
+          })}
         </div>
-        <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Runs locally</strong><span>Your data stays in your browser.</span></div></div><span className="version">DevBox v1.0</span></div>
+        <div className="side-bottom"><div className="privacy"><Lock size={15}/><div><strong>Local-first by default</strong><span>Core utilities run in your browser.</span></div></div><span className="version">DevBox · 21 tools</span></div>
       </aside>
       <main className="main">
-        <div className="breadcrumb"><span>DevBox</span><ChevronRight size={14}/><strong>{current.name}</strong><button className="favorite-main" onClick={()=>toggleFav(current.id)}>{favorites.includes(current.id)?<Star fill="currentColor" size={17}/>:<Star size={17}/>}</button></div>
-        {view==="catalog"&&<section className="hero">
-          <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> FAST · PRIVATE · BROWSER-FIRST</div><h1><span className="outline-word">DEV</span><br/>TOOLS<br/><span>REIMAGINED.</span></h1><p>One focused workspace for the utilities developers reach for every day. Fast, expressive and private by design.</p><div className="hero-actions"><button className="hero-cta" onClick={()=>selectTool("json")}>Explore tools <ChevronRight size={16}/></button><span><Lock size={13}/> No signup required</span></div></div>
-          <div className="hero-stats"><div><strong>{tools.length}</strong><span>tools</span></div><div><strong>0</strong><span>required APIs</span></div><div><strong>100%</strong><span>browser-first</span></div></div>
-        </section>}
-        {view==="catalog"&&<div className="section-heading"><div><span className="section-kicker">TOOLKIT</span><h2>What are you working on?</h2><p className="catalog-subtitle">Search by task or choose a tool. Your recent and favorite tools stay close at hand.</p></div><span className="tool-count">{filtered.length} tools</span></div>}
-        {view==="catalog"?<>
-          {historyItems.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">PICK UP WHERE YOU LEFT OFF</span><h3>Recently used</h3></div></div><div className="recent-row">{historyItems.slice(0,5).map(item=>{const t=tools.find(x=>x.id===item.toolId);return t?<button className="recent-tool" key={item.toolId} onClick={()=>selectTool(t.id)}><t.icon size={16}/><span>{t.name}</span><ChevronRight size={14}/></button>:null})}</div></section>}
-          {favoriteTools.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">YOUR SHORTLIST</span><h3>Favorites</h3></div></div><div className="recent-row">{favoriteTools.slice(0,6).map(t=><button className="recent-tool" key={t.id} onClick={()=>selectTool(t.id)}><Star size={15} fill="currentColor"/><span>{t.name}</span><ChevronRight size={14}/></button>)}</div></section>}
-          <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}</button>)}</div>
-          {filtered.length?<div className="quick-grid">{filtered.map(t=><button className="quick" key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={17}/><span><strong>{t.name}</strong><small>{t.desc}</small></span><ChevronRight size={14}/></button>)}</div>:<div className="catalog-empty"><Search size={22}/><h3>No tools match “{query}”</h3><p>Try a shorter search or choose another category.</p><button className="text-btn" onClick={()=>{setQuery("");setCategory("All")}}>Clear filters</button></div>}
-        </>:<div className="workspace-view"><div className="workspace-toolbar"><button className="back-to-tools" onClick={()=>{setView("catalog");setQuery("");setCategory("All")}}><ChevronRight size={15}/> Browse all tools</button><span className="workspace-category">{current.category}</span></div><div className="content">{content}</div></div>}
-        {view==="catalog"&&<section className="seo-section">
-          <div>
-            <span className="section-kicker">ABOUT THIS TOOL</span>
-            <h2>{seo[current.id]?.title||current.name}</h2>
-            <p>{seo[current.id]?.description||current.desc} DevBox is designed to keep routine developer workflows fast, distraction-free and private. Wherever possible, processing happens locally in your browser.</p>
-          </div>
-          <div className="seo-points">
-            <div><Lock size={16}/><strong>Privacy first</strong><span>No account required for core tools.</span></div>
-            <div><Zap size={16}/><strong>Instant results</strong><span>Client-side processing means no round trip.</span></div>
-            <div><ShieldCheck size={16}/><strong>Developer focused</strong><span>Simple inputs, clear outputs and useful actions.</span></div>
-          </div>
-        </section>}
-        <footer><span>© 2026 DevBox</span><span>Built for developers · Privacy first</span><span>All processing stays local where possible</span></footer>
+        {view==="workspace"?<>
+          <div className="breadcrumb"><button onClick={showCatalog}>All tools</button><ChevronRight size={14}/><span>{current.category}</span><ChevronRight size={14}/><strong>{current.name}</strong><button className="favorite-main" aria-label={favorites.includes(current.id)?"Remove favorite":"Add favorite"} title={favorites.includes(current.id)?"Remove favorite":"Add favorite"} onClick={()=>toggleFav(current.id)}>{favorites.includes(current.id)?<Star fill="currentColor" size={17}/>:<Star size={17}/>}</button></div>
+          <div className="workspace-toolbar"><button className="back-to-tools" onClick={showCatalog}><ChevronRight size={15}/> All tools</button><span className="workspace-category">{current.category}</span></div>
+          <div className="workspace-view"><div className="content">{content}</div></div>
+        </>:<>
+          <section className="hero">
+            <div className="hero-copy"><div className="eyebrow"><Zap size={14}/> A CLEARER WAY TO BUILD</div><h1>Developer tools.<br/><span>Without the clutter.</span></h1><p>Fast, focused utilities for the everyday work of building software. No account, no setup, no noise.</p><div className="hero-meta"><span><Lock size={13}/> Local-first</span><span><ShieldCheck size={13}/> Privacy-minded</span><span><Zap size={13}/> Ready in seconds</span></div></div>
+            <div className="hero-stats"><div><strong>{tools.length}</strong><span>focused tools</span></div><div><strong>0</strong><span>accounts needed</span></div></div>
+          </section>
+          <section className="catalog-section">
+            <div className="section-heading"><div><span className="section-kicker">TOOL DIRECTORY</span><h2>What do you need to get done?</h2><p className="catalog-subtitle">Choose a workflow or search by the task you have in mind.</p></div><span className="tool-count">{filtered.length} of {tools.length}</span></div>
+            {recentTools.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">PICK UP WHERE YOU LEFT OFF</span><h3>Recently used</h3></div><button className="subtle-link" onClick={()=>setWorkspaceOpen(true)}>View activity</button></div><div className="recent-row">{recentTools.map(t=><button className="recent-tool" key={t.id} onClick={()=>selectTool(t.id)}><t.icon size={16}/><span>{t.name}</span><ChevronRight size={14}/></button>)}</div></section>}
+            {favoriteTools.length>0&&<section className="discovery-section"><div className="discovery-heading"><div><span className="section-kicker">YOUR PINNED TOOLS</span><h3>Favorites</h3></div></div><div className="recent-row">{favoriteTools.slice(0,6).map(t=><button className="recent-tool" key={t.id} onClick={()=>selectTool(t.id)}><Star size={14} fill="currentColor"/><span>{t.name}</span><ChevronRight size={14}/></button>)}</div></section>}
+            <div className="category-pills">{categories.map(c=><button key={c} className={category===c?"active":""} onClick={()=>setCategory(c)}>{c}<span>{c==="All"?tools.length:tools.filter(t=>t.category===c).length}</span></button>)}</div>
+            {filtered.length?<div className="quick-grid">{filtered.map(t=><button className="quick" key={t.id} onClick={()=>selectTool(t.id)}><span className="quick-icon"><t.icon size={18}/></span><span className="quick-copy"><strong>{t.name}</strong><small>{t.desc}</small><em>{t.category}</em></span><ChevronRight className="quick-arrow" size={16}/></button>)}</div>:<div className="catalog-empty"><Search size={22}/><h3>No tools found</h3><p>Try a different keyword or clear the category filter.</p><button className="text-btn" onClick={()=>{setQuery("");setCategory("All")}}>Clear filters</button></div>}
+          </section>
+          <section className="trust-strip"><div><Lock size={17}/><span><strong>Local-first</strong><small>Your content stays in your browser where possible.</small></span></div><div><ShieldCheck size={17}/><span><strong>No account needed</strong><small>Open a tool and get straight to work.</small></span></div><div><Zap size={17}/><span><strong>Focused workflows</strong><small>Clear controls and useful output, without clutter.</small></span></div></section>
+        </>}
+        <footer><span>© 2026 DevBox</span><span>Built for developers · Privacy first</span><span>Local processing where supported</span></footer>
       </main>
     </div>
-    {settingsOpen&&<div className="modal-backdrop" onClick={()=>setSettingsOpen(false)}><div className="settings-modal" onClick={e=>e.stopPropagation()}><div className="settings-head"><div><span className="section-kicker">PREFERENCES</span><h3>DevBox settings</h3></div><button className="icon-btn light" onClick={()=>setSettingsOpen(false)}><X size={17}/></button></div><div className="settings-row"><div><strong>Appearance</strong><span>Switch between the editorial dark and light themes.</span></div><button className="setting-toggle" onClick={()=>setDark(!dark)}>{dark?<Moon size={15}/>:<Sun size={15}/>} {dark?"Dark":"Light"}</button></div><div className="settings-row"><div><strong>Favorites</strong><span>{favorites.length} saved tool{favorites.length===1?"":"s"} stored locally.</span></div><button className="setting-danger" onClick={()=>setFavorites([])}>Clear favorites</button></div><div className="settings-row"><div><strong>Privacy</strong><span>Core tools process data in your browser.</span></div><span className="local-badge"><Lock size={13}/> Local-first</span></div></div></div>}
+    {workspaceOpen&&<WorkspaceModal items={historyItems} onClose={()=>setWorkspaceOpen(false)} onDelete={id=>setHistoryItems(items=>items.filter(x=>x.id!==id))} onClear={()=>setHistoryItems([])} onLoad={item=>{setWorkspaceOpen(false);selectTool(item.toolId)}}/>}
+    {settingsOpen&&<div className="modal-backdrop" onClick={()=>setSettingsOpen(false)}><div className="settings-modal" onClick={e=>e.stopPropagation()}><div className="settings-head"><div><span className="section-kicker">PREFERENCES</span><h3>DevBox settings</h3></div><button className="icon-btn light" onClick={()=>setSettingsOpen(false)}><X size={17}/></button></div><div className="settings-row"><div><strong>Appearance</strong><span>Choose a theme that stays consistent across your workspace.</span></div><button className="setting-toggle" onClick={()=>setDark(!dark)}>{dark?<Moon size={15}/>:<Sun size={15}/>} {dark?"Dark":"Light"}</button></div><div className="settings-row"><div><strong>Favorites</strong><span>{favorites.length} pinned tool{favorites.length===1?"":"s"} saved on this device.</span></div><button className="setting-danger" onClick={()=>setFavorites([])}>Clear favorites</button></div><div className="settings-row"><div><strong>Privacy</strong><span>Core utilities process content locally when supported.</span></div><span className="local-badge"><Lock size={13}/> Local-first</span></div></div></div>}
   </div>
 }
-
 function SideItem({tool,active,onClick,fav,onFav}){return <div className={active?"side-item active":"side-item"}><button onClick={onClick}><tool.icon size={16}/><span>{tool.name}</span></button><button className="side-star" onClick={e=>{e.stopPropagation();onFav()}}>{fav?<Star size={13} fill="currentColor"/>:<Star size={13}/>}</button></div>}
 
 createRoot(document.getElementById("root")).render(<App/>);
