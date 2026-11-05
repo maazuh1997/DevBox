@@ -592,7 +592,7 @@ function HttpClientWorkbench(){
   const copy=v=>navigator.clipboard?.writeText(v);
   const curl=useMemo(()=>{
     // POSIX single-quote escaping prevents shell metacharacters from changing command meaning.
-    const quote=value=>"'"+String(value).replace(/'/g,"'\\\\''")+"'";
+    const quote=value=>"'"+String(value).replace(/'/g,"'\\''")+"'";
     try{
       let s=`curl -X ${method} ${quote(buildUrl())}`;
       headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H ${quote(`${h.key}: ${h.value}`)}`);
