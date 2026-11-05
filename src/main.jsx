@@ -412,8 +412,8 @@ function navigateTo(id){
 
 function WorkspaceModal({items,onClose,onDelete,onClear,onLoad}){
   return <div className="modal-backdrop" onMouseDown={e=>e.target===e.currentTarget&&onClose()}>
-    <div className="modal"><div className="modal-head"><div><span className="section-kicker">LOCAL WORKSPACE</span><h3>Recent work</h3></div><button className="icon-btn" onClick={onClose}><X size={15}/></button></div>
-      {!items.length?<div className="empty-state"><Clock3 size={28}/><strong>No recent work yet</strong><span>Your recent tool activity will appear here.</span></div>:<div className="history-list">{items.map(item=><div className="history-row" key={item.id}><div><strong>{item.tool}</strong><span>{new Date(item.createdAt).toLocaleString()}</span><code>{item.preview}</code></div><div className="history-actions"><button onClick={()=>onLoad(item)}><RotateCcw size={14}/> Load</button><button onClick={()=>onDelete(item.id)}><Trash2 size={14}/></button></div></div>)}</div>}
+    <div className="modal"><div className="modal-head"><div><span className="section-kicker">LOCAL ACTIVITY</span><h3>Recent tools</h3></div><button className="icon-btn" onClick={onClose}><X size={15}/></button></div>
+      {!items.length?<div className="empty-state"><Clock3 size={28}/><strong>No recent work yet</strong><span>Your recent tool activity will appear here.</span></div>:<div className="history-list">{items.map(item=><div className="history-row" key={item.id}><div><strong>{item.tool}</strong><span>{new Date(item.createdAt).toLocaleString()}</span><code>{item.preview}</code></div><div className="history-actions"><button onClick={()=>onLoad(item)}><RotateCcw size={14}/> Open tool</button><button onClick={()=>onDelete(item.id)}><Trash2 size={14}/></button></div></div>)}</div>}
       {!!items.length&&<button className="danger-link" onClick={onClear}>Clear history</button>}
     </div></div>
 }
