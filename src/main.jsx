@@ -621,6 +621,8 @@ function HttpClientWorkbench(){
   const [tab,setTab]=useState("body");
   const [history,setHistory]=useState([]);
 
+  const encodeBase64Utf8=value=>btoa(unescape(encodeURIComponent(value)));
+
   const buildUrl=()=>{
     const u=new URL(url);
     if(!["http:","https:"].includes(u.protocol))throw new Error("Only HTTP and HTTPS URLs are supported.");
@@ -644,7 +646,7 @@ function HttpClientWorkbench(){
       });
       if(auth==="Bearer"&&token)hs.Authorization=`Bearer ${token}`;
       if(auth==="Basic"&&token){
-        try{hs.Authorization=`Basic ${btoa(unescape(encodeURIComponent(token))) }`.trim()}
+        try{hs.Authorization=`Basic ${encodeBase64Utf8(token)}`}
         catch{throw new Error("Basic authorization credentials could not be encoded.")}
       }
       const opts={method,headers:hs,signal:controller.signal};
@@ -676,7 +678,8 @@ function HttpClientWorkbench(){
       let s=`curl -X ${method} ${quote(buildUrl())}`;
       headers.filter(h=>h.key.trim()).forEach(h=>s+=` \\\n  -H ${quote(`${h.key}: ${h.value}`)}`);
       if(auth==="Bearer"&&token)s+=` \\\n  -H ${quote(`Authorization: Bearer ${token}`)}`;
-      if(auth==="Basic"&&token)s+=` \\\n  -H ${quote(`Authorization: Basic ${btoa(token)}`)}`;
+      if(auth==="Basic"&&token)s+=` \\\n  -H ${quote(`Authorization: Basic ${encodeBase64Utf8(token)}`)}`;
+      if(bodyType==="JSON"&&body&&!headers.some(h=>h.key.trim().toLowerCase()==="content-type"))s+=` \\\n  -H ${quote("Content-Type: application/json")}`;
       if(!["GET","HEAD"].includes(method)&&body)s+=` \\\n  --data ${quote(body)}`;
       return s;
     }catch{return "Enter a valid HTTP(S) URL to generate cURL."}
