@@ -1566,15 +1566,45 @@ function ApiMockBuilder(){
 }
 
 class AppErrorBoundary extends React.Component{
-  constructor(props){super(props);this.state={error:null};}
+  constructor(props){super(props);this.state={error:null,resetting:false};}
   static getDerivedStateFromError(error){return {error};}
-  componentDidCatch(error,info){console.error("DevBox render failure",error,info);}
+  componentDidCatch(error,info){
+    window.__DEVBOX_LAST_ERROR={message:error?.message||String(error),stack:error?.stack||"",componentStack:info?.componentStack||""};
+    console.error("DevBox application failure",error,info);
+  }
+  reload(){
+    window.location.reload();
+  }
+  async resetLocalApp(){
+    this.setState({resetting:true});
+    try{
+      for(const key of ["devbox-history","devbox-favorites","devbox-theme","devbox-json"]){
+        try{window.localStorage.removeItem(key);}catch{}
+      }
+      if("serviceWorker" in navigator){
+        const registrations=await navigator.serviceWorker.getRegistrations();
+        await Promise.all(registrations.filter(reg=>new URL(reg.scope).pathname.startsWith(appBasePath())).map(reg=>reg.unregister()));
+      }
+      if("caches" in window){
+        const keys=await caches.keys();
+        await Promise.all(keys.filter(key=>key.startsWith("devbox-shell-")).map(key=>caches.delete(key)));
+      }
+    }catch(error){console.warn("DevBox clean reload could not clear every browser cache",error);}
+    window.location.replace(appBasePath()+"?fresh="+Date.now());
+  }
   render(){
-    if(this.state.error)return <main className="main"><section className="catalog-empty"><h2>DevBox could not open this screen</h2><p>{this.state.error?.message||"An unexpected rendering error occurred."}</p><button className="text-btn" onClick={()=>{this.setState({error:null});window.location.assign(appBasePath());}}>Return to all tools</button></section></main>;
+    if(this.state.error)return <main className="main"><section className="catalog-empty" role="alert">
+      <h2>DevBox could not open this screen</h2>
+      <p>{this.state.error?.message||String(this.state.error)||"An unexpected application error occurred."}</p>
+      <div className="error-recovery-actions">
+        <button className="text-btn" onClick={()=>this.reload()}>Reload DevBox</button>
+        <button className="text-btn" disabled={this.state.resetting} onClick={()=>this.resetLocalApp()}>{this.state.resetting?"Resetting…":"Reset local app data and reload"}</button>
+      </div>
+      <details className="error-diagnostics"><summary>Technical details</summary><pre>{this.state.error?.stack||String(this.state.error)}</pre></details>
+    </section></main>;
     return this.props.children;
   }
 }
-
 
 class ToolErrorBoundary extends React.Component{
   constructor(props){super(props);this.state={error:null};}
@@ -1606,7 +1636,12 @@ function App(){
   const [historyItems,setHistoryItems]=useState(()=>{
     try{
       const value=JSON.parse(readStorage("devbox-history","[]"));
-      return Array.isArray(value)?value.map(item=>({...item,toolId:canonicalToolId(item.toolId)})).filter(item=>item.toolId):[];
+      if(!Array.isArray(value))return [];
+      return value
+        .filter(item=>item&&typeof item==="object"&&!Array.isArray(item))
+        .map(item=>({...item,toolId:canonicalToolId(item.toolId)}))
+        .filter(item=>item.toolId&&tools.some(tool=>tool.id===item.toolId))
+        .slice(0,40);
     }catch{return []}
   });
   const [settingsOpen,setSettingsOpen]=useState(false);
@@ -1614,7 +1649,8 @@ function App(){
   const [favorites,setFavorites]=useState(()=>{
     try{
       const value=JSON.parse(readStorage("devbox-favorites","[]"));
-      return Array.isArray(value)?[...new Set(value.map(canonicalToolId).filter(Boolean))]:[];
+      if(!Array.isArray(value))return [];
+      return [...new Set(value.filter(id=>typeof id==="string").map(canonicalToolId).filter(Boolean))];
     }catch{return []}
   });
   useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";writeStorage("devbox-theme",dark?"dark":"light")},[dark]);
