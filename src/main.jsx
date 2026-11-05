@@ -437,7 +437,7 @@ function getToolFromPath(){
   let relative=pathname;
   if(pathname===base.slice(0,-1)||pathname===base)relative="";
   else if(pathname.startsWith(base))relative=pathname.slice(base.length);
-  else relative=pathname.replace(/^\\/+/, "");
+  else relative=pathname.replace(/^\/+/, "");
   const parts=relative.split("/").filter(Boolean);
   if(parts.length===0)return null;
   if(parts[0]!=="tools"||!parts[1])return null;
