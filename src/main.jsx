@@ -12,6 +12,8 @@ const tools = [
 {id:"base64-file",name:"Base64 File Encoder",desc:"Encode files and UTF-8 text or decode Base64 back into downloadable files",icon:Binary,category:"Developer Assets"},
 {id:"uuid-batch",name:"UUID Batch Generator",desc:"Generate secure UUID v4 identifiers in bulk with copy and export",icon:Fingerprint,category:"Security & Config"},
 {id:"url-inspector",name:"URL Inspector & Builder",desc:"Parse URL components and safely edit query parameters",icon:Link2,category:"Web & API"},
+{id:"timestamp-converter",name:"Unix Timestamp Converter",desc:"Convert Unix timestamps to dates and dates back to Unix time",icon:Clock3,category:"Developer Workflow"},
+{id:"color-converter",name:"Color Converter",desc:"Convert HEX colors to RGB and preview color values",icon:Palette,category:"App & Asset Studio"},
 {id:"webhook-sender",name:"Webhook Request Tester",desc:"Send HTTP requests to webhook endpoints and inspect responses",icon:Globe2,category:"API & Backend"},
 {id:"api-mock-builder",name:"API Mock Response Builder",desc:"Compose realistic JSON API responses with status and headers",icon:Braces,category:"Testing & Data"},
 {id:"image-compressor",name:"Image Compressor",desc:"Resize and compress images to optimized JPEG, PNG or WebP files",icon:Palette,category:"App & Asset Studio"},
@@ -273,9 +275,10 @@ function TimestampTool(){
   const [timestamp,setTimestamp]=useState(String(Math.floor(Date.now()/1000)));
   const [date,setDate]=useState(new Date().toISOString().slice(0,16));
   const parsed=Number(timestamp);
-  const converted=Number.isFinite(parsed)?new Date(parsed*1000).toISOString():"Invalid timestamp";
+  const parsedDate=new Date(parsed*1000);
+  const converted=Number.isFinite(parsed)&&!Number.isNaN(parsedDate.getTime())?parsedDate.toISOString():"Invalid timestamp";
   const dateTs=Number.isNaN(new Date(date).getTime())?"Invalid date":Math.floor(new Date(date).getTime()/1000);
-  return <ToolShell tool={tools[6]} value={`${converted}\n${dateTs}`}>
+  return <ToolShell tool={tools.find(t=>t.id==="timestamp-converter")} value={`${converted}\n${dateTs}`}>
     <div className="cards two"><Panel label="UNIX → DATE"><input value={timestamp} onChange={e=>setTimestamp(e.target.value)}/><div className="result">{converted}</div></Panel><Panel label="DATE → UNIX"><input type="datetime-local" value={date} onChange={e=>setDate(e.target.value)}/><div className="result">{dateTs}</div></Panel></div>
   </ToolShell>
 }
@@ -301,11 +304,15 @@ function QrTool(){
 
 function ColorTool(){
   const [hex,setHex]=useState("#7c5cff");
-  function hexToRgb(h){let x=h.replace("#","");if(x.length===3)x=x.split("").map(c=>c+c).join("");const n=parseInt(x,16);return {r:n>>16&255,g:n>>8&255,b:n&255}}
-  const rgb=hexToRgb(hex);
-  return <ToolShell tool={tools[9]} value={`HEX: ${hex}\nRGB: rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`}>
-    <div className="color-work"><input className="color-picker" type="color" value={hex} onChange={e=>setHex(e.target.value)}/><input value={hex} onChange={e=>setHex(e.target.value)} /><div className="swatch" style={{background:hex}}/></div>
-    <Panel label="VALUES"><div className="value-grid"><div><span>HEX</span><strong>{hex}</strong></div><div><span>RGB</span><strong>rgb({rgb.r}, {rgb.g}, {rgb.b})</strong></div></div></Panel>
+  const valid=/^#?(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/.test(hex.trim());
+  const normalized=hex.startsWith("#")?hex:"#"+hex;
+  function hexToRgb(value){let x=value.replace("#","");if(x.length===3)x=x.split("").map(c=>c+c).join("");const n=parseInt(x,16);return {r:(n>>16)&255,g:(n>>8)&255,b:n&255}}
+  const rgb=valid?hexToRgb(normalized):null;
+  const output=valid?`HEX: ${normalized}\nRGB: rgb(${rgb.r}, ${rgb.g}, ${rgb.b})`:"Enter a valid 3- or 6-digit HEX color.";
+  return <ToolShell tool={tools.find(t=>t.id==="color-converter")} value={output}>
+    <div className="color-work"><input className="color-picker" type="color" value={valid?normalized:"#000000"} onChange={e=>setHex(e.target.value)}/><input aria-label="HEX color value" maxLength={7} value={hex} onChange={e=>setHex(e.target.value)} placeholder="#7c5cff"/><div className="swatch" style={{background:valid?normalized:"transparent"}}/></div>
+    {!valid&&<div className="alert error-box" role="status">Enter a valid HEX value, such as #7c5cff or #abc.</div>}
+    {valid&&<Panel label="VALUES"><div className="value-grid"><div><span>HEX</span><strong>{normalized.toUpperCase()}</strong></div><div><span>RGB</span><strong>rgb({rgb.r}, {rgb.g}, {rgb.b})</strong></div></div></Panel>}
   </ToolShell>
 }
 
@@ -401,8 +408,8 @@ const legacyToolAliases = {
   markdown:"markdown-studio", "markdown-studio":"markdown-studio",
   sql:"sql-workbench", "sql-workbench":"sql-workbench",
   "json-typescript":"json-typescript", "json-diff":"json-diff",
-  uuid:"uuid", base64:"base64", timestamp:"timestamp", url:"url", color:"color",
-  json:"json", "curl-builder":"curl-builder", "headers-inspector":"headers-inspector",
+  uuid:"uuid-batch", base64:"base64-file", timestamp:"timestamp-converter", url:"url-inspector", color:"color-converter",
+  json:"data-transform", "curl-builder":"curl-builder", "headers-inspector":"headers-inspector",
   "data-transform":"data-transform", "openapi-workbench":"openapi-workbench",
   "code-formatter":"code-formatter", "env-workbench":"env-workbench", "diff-merge":"diff-merge",
   "app-icon-studio":"app-icon-studio", "jwt-secret":"jwt-secret", "sample-files":"sample-files",
@@ -1132,7 +1139,7 @@ function AppIconStudio(){
  if(img.naturalWidth){const scale=(fit==="cover"?Math.max:Math.min)(item.size/img.width,item.size/img.height),w=img.width*scale,h=img.height*scale;ctx.drawImage(img,(item.size-w)/2,(item.size-h)/2,w,h)}else{ctx.fillStyle="#6757e8";ctx.beginPath();ctx.roundRect(item.size*.08,item.size*.08,item.size*.84,item.size*.84,item.size*.2);ctx.fill();ctx.fillStyle="#fff";ctx.font="bold "+Math.floor(item.size*.48)+"px Arial";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText((name.trim()[0]||"A").toUpperCase(),item.size/2,item.size/2)}
  const blob=await canvasBlob(c);entries.push({name:item.path,data:new Uint8Array(await blob.arrayBuffer())});if(item.logical)iosMeta.push({filename:item.path.split("/").pop(),idiom:item.idiom,scale:item.scale+"x",size:item.logical+"x"+item.logical})}
  if(target==="all"||target==="ios")entries.push({name:"ios/AppIcon.appiconset/Contents.json",data:JSON.stringify({images:iosMeta,info:{author:"xcode",version:1}},null,2)});
- if(target==="all"||target==="web")entries.push({name:"web/manifest.webmanifest",data:JSON.stringify({name,short_name:name.slice(0,12),start_url:"/",display:"standalone",icons:[192,512].map(n=>({src:"/icons/icon-"+n+".png",sizes:n+"x"+n,type:"image/png"}))},null,2)});
+ if(target==="all"||target==="web")entries.push({name:"web/manifest.webmanifest",data:JSON.stringify({name,short_name:name.slice(0,12),start_url:"./",scope:"./",display:"standalone",icons:[192,512].map(n=>({src:"./icon-"+n+".png",sizes:n+"x"+n,type:"image/png"}))},null,2)});
  entries.push({name:"README.txt",data:"Generated locally by DevBox App Icon Studio. Verify target platform specifications before release."});downloadBlob((name.trim().replace(/[^a-z0-9_-]+/gi,"-")||"app")+"-icons.zip",zipStore(entries));setStatus("Generated "+spec.length+" PNG icon assets and downloaded the ZIP.")}catch(e){setStatus(e.message||"Generation failed.")}finally{setBusy(false)}}
  return <ToolShell title="App Icon Studio" subtitle="Upload your app artwork and export platform-ready icon sizes for Android, iOS and web."><div className="icon-studio"><div className="icon-studio-controls"><label className="action-field"><span>APP NAME</span><input value={name} onChange={e=>setName(e.target.value)}/></label><label className="upload-drop"><input type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" onChange={choose}/><strong>{file?file.name:"Choose your app logo or image"}</strong><small>PNG, JPG, WEBP or SVG · up to 15 MB</small></label><label className="action-field"><span>IMAGE FIT</span><select value={fit} onChange={e=>setFit(e.target.value)}><option value="contain">Contain — no crop</option><option value="cover">Cover — fill square</option></select></label><label className="action-field"><span>BACKGROUND</span><input type="color" value={bg} onChange={e=>setBg(e.target.value)}/></label><label className="action-field"><span>EXPORT TARGET</span><select value={target} onChange={e=>setTarget(e.target.value)}><option value="all">Android + iOS + Web</option><option value="android">Android only</option><option value="ios">iOS only</option><option value="web">Web / PWA only</option></select></label><button className="primary" disabled={busy} onClick={generate}>{busy?"Generating…":"Generate icon pack"} <Download size={15}/></button>{status&&<p className="icon-message">{status}</p>}<p className="data-note">Creates actual PNG files at platform sizes and packages them in a ZIP. Image processing stays in your browser.</p></div><div className="icon-preview-stage"><div className="icon-preview-frame" style={{background:bg}}>{preview?<img src={preview} alt="App icon preview"/>:<span>{(name.trim()[0]||"A").toUpperCase()}</span>}</div><strong>{name||"Your application"}</strong><small>Live icon preview</small></div></div></ToolShell>
 }
@@ -1397,6 +1404,12 @@ function App(){
     }catch{return []}
   });
   useEffect(()=>{document.documentElement.dataset.theme=dark?"dark":"light";writeStorage("devbox-theme",dark?"dark":"light")},[dark]);
+  useEffect(()=>{
+    if(!import.meta.env.PROD||!("serviceWorker" in navigator))return;
+    const base=import.meta.env.BASE_URL||"/";
+    navigator.serviceWorker.register(`${base}sw.js`,{scope:base}).catch(()=>{});
+  },[]);
+
   useEffect(()=>setMeta(active),[active]);
   useEffect(()=>{
     const onPop=()=>{
@@ -1435,10 +1448,12 @@ function App(){
   function selectTool(id){
     const canonical=canonicalToolId(id);
     if(!tools.some(t=>t.id===canonical))return;
+    const selected=tools.find(t=>t.id===canonical);
+    addHistory({toolId:canonical,tool:selected.name,preview:selected.desc});
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
+  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"timestamp-converter":<TimestampTool/>,"color-converter":<ColorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">

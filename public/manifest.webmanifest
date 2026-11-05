@@ -1,9 +1,10 @@
 {
-  "name":"DevBox — Developer Toolkit",
-  "short_name":"DevBox",
-  "start_url":"/",
-  "display":"standalone",
-  "background_color":"#111111",
-  "theme_color":"#ed403d",
-  "description":"Fast, private, browser-first developer utilities."
+  "name": "DevBox — Developer Toolkit",
+  "short_name": "DevBox",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#111724",
+  "theme_color": "#111724",
+  "description": "Fast, private, browser-first developer utilities."
 }

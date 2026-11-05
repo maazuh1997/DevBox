@@ -1360,3 +1360,41 @@ button,.quick,.recent-tool,.tool-shell,.file-btn,.category-pills button{
   :root{--muted:#465168;--line:#aeb8ca}
   :root[data-theme=dark]{--muted:#d0d7e5;--line:#68758c}
 }
+
+
+/* Deep audit fixes: contrast states and nested tool output surfaces */
+:root[data-theme=light] .quick:hover,:root[data-theme=light] .quick.active,
+:root[data-theme=light] .category-pills button:hover,
+:root[data-theme=light] .category-pills button.active,
+:root[data-theme=dark] .quick:hover,:root[data-theme=dark] .quick.active,
+:root[data-theme=dark] .category-pills button:hover,
+:root[data-theme=dark] .category-pills button.active{color:var(--text-strong)}
+.modal-head .icon-btn,.tool-action-btn,.tool-action-btn.subtle,
+.history-row span,.history-row code,.empty-state,.empty-state span,
+.generated-code,.curl-preview,.sql-preview,.endpoint-detail pre,.md-preview pre,
+.response-code,.response-meta,.http-empty span,.http-error span,.http-error small,
+.response-headers span,.history-url,.history-empty,.upload-drop small,
+.sample-card-copy span,.sample-card-copy p,.icon-studio .data-note,
+.icon-preview-stage small,.sample-file-icon,.env-row small,.section-line span,
+.auth-section label{color:var(--muted)}
+.history-row strong,.empty-state strong,.generated-code .pane-head strong,
+.response-head strong,.section-line strong,.sample-card-copy strong{color:var(--text-strong)}
+.generated-code,.curl-preview,.sql-preview,.endpoint-detail pre,.md-preview pre,
+.response-code,.response-headers,.history-row code{background:var(--surface-soft)}
+.modal-head .icon-btn{color:var(--text-strong);background:var(--surface-soft);border-color:var(--line)}
+.tool-action-btn{color:var(--text-strong);background:var(--surface-raised);border-color:var(--line)}
+.tool-action-btn.subtle{color:var(--muted-strong)}
+.tool-action-btn:hover,.tool-action-btn.subtle:hover{color:var(--text-strong);border-color:var(--accent)}
+.category-pills button:hover{background:var(--accent-soft);border-color:var(--line)}
+.quick:hover,.quick.active{background:var(--accent-soft);border-color:var(--line)}
+.quick:hover small,.quick.active small{color:var(--muted)}
+:root[data-theme=dark] .generated-code,:root[data-theme=dark] .curl-preview,
+:root[data-theme=dark] .sql-preview,:root[data-theme=dark] .endpoint-detail pre,
+:root[data-theme=dark] .md-preview pre,:root[data-theme=dark] .response-code{
+  color:var(--text);background:var(--surface-soft);
+}
+:root[data-theme=dark] .history-row code{color:var(--text);background:var(--surface-soft)}
+:root[data-theme=dark] .modal-head .icon-btn,:root[data-theme=dark] .tool-action-btn,
+:root[data-theme=dark] .empty-state strong{color:var(--text-strong)}
+.qr-placeholder{color:var(--muted)}
+.regex-grid{min-width:0}
