@@ -9,6 +9,9 @@ import {
 import "./styles.css";
 
 const tools = [
+{id:"base64-file",name:"Base64 File Encoder",desc:"Encode files and UTF-8 text or decode Base64 back into downloadable files",icon:Binary,category:"Developer Assets"},
+{id:"uuid-batch",name:"UUID Batch Generator",desc:"Generate secure UUID v4 identifiers in bulk with copy and export",icon:Fingerprint,category:"Security & Config"},
+{id:"url-inspector",name:"URL Inspector & Builder",desc:"Parse URL components and safely edit query parameters",icon:Link2,category:"Web & API"},
 {id:"image-compressor",name:"Image Compressor",desc:"Resize and compress images to optimized JPEG, PNG or WebP files",icon:Palette,category:"App & Asset Studio"},
 {id:"svg-optimizer",name:"SVG Optimizer",desc:"Clean, minify and inspect SVG markup before shipping",icon:Braces,category:"App & Asset Studio"},
 {id:"sql-seed",name:"SQL Seed Data Generator",desc:"Generate realistic INSERT statements for local development and tests",icon:Database,category:"Data & Database"},
@@ -408,7 +411,7 @@ const legacyToolAliases = {
   "code-formatter":"code-formatter", "hash-hmac":"hash-hmac", "headers-inspector":"headers-inspector",
   "diff-merge":"diff-merge", "env-workbench":"env-workbench"
 ,
-  "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed"
+  "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||null}
 function getToolFromPath(){
@@ -1267,6 +1270,63 @@ function SqlSeedGenerator(){
  <p className="data-note">Fixed demo schema: id, name, email, status, created_at. Review column types and constraints against your actual database before running.</p></ToolShell>
 }
 
+
+function Base64FileTool(){
+ const [mode,setMode]=useState("text-encode"),[input,setInput]=useState(""),[file,setFile]=useState(null),[filename,setFilename]=useState("decoded-file.bin"),[mime,setMime]=useState("application/octet-stream"),[output,setOutput]=useState(""),[error,setError]=useState(""),[busy,setBusy]=useState(false),[decoded,setDecoded]=useState(null);
+ function bytesToBase64(bytes){let binary="";const chunk=0x8000;for(let i=0;i<bytes.length;i+=chunk)binary+=String.fromCharCode(...bytes.subarray(i,i+chunk));return btoa(binary)}
+ async function run(){
+  setError("");setOutput("");setDecoded(null);setBusy(true);
+  try{
+   if(mode==="text-encode"){if(!input)throw Error("Enter text to encode.");setOutput(bytesToBase64(new TextEncoder().encode(input)))}
+   else if(mode==="file-encode"){if(!file)throw Error("Choose a file first.");if(file.size>10*1024*1024)throw Error("For browser performance, files are limited to 10 MB.");setOutput(bytesToBase64(new Uint8Array(await file.arrayBuffer())))}
+   else{
+    const compact=input.replace(/\s+/g,"");if(!compact)throw Error("Paste Base64 content to decode.");if(compact.length>15*1024*1024)throw Error("Decoded data is too large for this browser tool.");
+    let binary;try{binary=atob(compact)}catch{throw Error("Invalid Base64. Check the input and padding.")};
+    const bytes=Uint8Array.from(binary,c=>c.charCodeAt(0));const blob=new Blob([bytes],{type:mime||"application/octet-stream"});setDecoded(blob);setOutput("Decoded "+bytes.length.toLocaleString()+" bytes successfully.");
+   }
+  }catch(e){setError(e.message||"Operation failed.")}finally{setBusy(false)}
+ }
+ function download(){if(mode==="decode"&&decoded){const url=URL.createObjectURL(decoded),a=document.createElement("a");a.href=url;a.download=filename||"decoded-file.bin";a.click();setTimeout(()=>URL.revokeObjectURL(url),1000)}else if(output)downloadText(mode==="file-encode"?"file.base64.txt":"encoded.base64.txt",output)}
+ return <ToolShell title="Base64 File Encoder" subtitle="Encode UTF-8 text or files, and decode Base64 into a downloadable file. All processing stays in your browser." value={output}>
+  <div className="generator-fields"><label className="action-field">OPERATION<select value={mode} onChange={e=>{setMode(e.target.value);setOutput("");setError("");setDecoded(null)}}><option value="text-encode">Encode text</option><option value="file-encode">Encode file (max 10 MB)</option><option value="decode">Decode Base64</option></select></label>
+  {mode==="file-encode"?<label className="action-field">SOURCE FILE<input type="file" onChange={e=>setFile(e.target.files?.[0]||null)}/></label>:mode==="decode"?<><label className="action-field">OUTPUT FILE NAME<input value={filename} onChange={e=>setFilename(e.target.value)}/></label><label className="action-field">MIME TYPE<input value={mime} onChange={e=>setMime(e.target.value)} placeholder="application/octet-stream"/></label></>:null}</div>
+  {mode!=="file-encode"&&<div className="generator-fields"><label className="action-field full-width"> {mode==="decode"?"BASE64 INPUT":"TEXT TO ENCODE"}<textarea rows="8" value={input} onChange={e=>setInput(e.target.value)} placeholder={mode==="decode"?"Paste Base64 content here…":"Enter text to encode as Base64…"}/></label></div>}
+  {mode==="file-encode"&&<p className="data-note" style={{padding:"0 16px"}}>{file?file.name+" · "+(file.size/1024).toFixed(1)+" KB":"Choose any file up to 10 MB."}</p>}
+  <div className="sample-toolbar" style={{padding:14}}><button className="primary" disabled={busy} onClick={run}>{busy?"Processing…":mode==="decode"?"Decode Base64":"Encode Base64"} <Zap size={14}/></button></div>
+  {error&&<div className="alert error-box">{error}</div>}
+  {output&&<div className="base64-output"><pre className="code">{output}</pre>{mode==="decode"&&decoded&&<span className="data-note">Binary data is ready to download.</span>}<button className="primary" onClick={download}><Download size={14}/> {mode==="decode"?"Download decoded file":"Download Base64 text"}</button></div>}
+  <p className="data-note" style={{padding:"0 16px 14px"}}>Base64 is an encoding, not encryption. Do not use it to protect secrets. File encoding is limited to 10 MB.</p>
+ </ToolShell>
+}
+function UuidBatchTool(){
+ const [count,setCount]=useState(20),[format,setFormat]=useState("standard"),[uppercase,setUppercase]=useState(false),[items,setItems]=useState([]);
+ function generate(){try{const next=Array.from({length:Math.min(1000,Math.max(1,Number(count)||1))},()=>{let id=crypto.randomUUID();if(format==="compact")id=id.replace(/-/g,"");if(format==="braces")id="{"+id+"}";return uppercase?id.toUpperCase():id});setItems(next)}catch{setItems([])}}
+ const output=items.join("\n");
+ return <ToolShell title="UUID Batch Generator" subtitle="Generate cryptographically secure UUID v4 identifiers in bulk for fixtures, databases and test data." value={output}>
+  <div className="generator-fields"><label className="action-field">NUMBER OF UUIDS · MAX 1,000<input type="number" min="1" max="1000" value={count} onChange={e=>setCount(Math.min(1000,Math.max(1,Number(e.target.value)||1)))}/></label><label className="action-field">FORMAT<select value={format} onChange={e=>setFormat(e.target.value)}><option value="standard">Standard (hyphenated)</option><option value="compact">Compact (no hyphens)</option><option value="braces">Braces</option></select></label><label className="check"><input type="checkbox" checked={uppercase} onChange={e=>setUppercase(e.target.checked)}/> Uppercase output</label></div>
+  <div className="sample-toolbar" style={{padding:14}}><button className="primary" onClick={generate}>Generate {Math.min(1000,Math.max(1,Number(count)||1))} UUIDs <Zap size={14}/></button>{items.length>0&&<button className="text-btn" onClick={()=>downloadText("devbox-uuids.txt",output)}><Download size={14}/> Export .txt</button>}</div>
+  {items.length>0?<div className="uuid-list">{items.map((id,i)=><div className="uuid-row" key={i}><code>{id}</code><button className="text-btn" onClick={()=>copyText(id,()=>{})}><Copy size={13}/></button></div>)}</div>:<div className="empty-state"><Fingerprint size={26}/><strong>Your UUIDs will appear here</strong><span>Generate a batch to get started.</span></div>}
+  <p className="data-note" style={{padding:"0 16px 14px"}}>Uses the browser's crypto.randomUUID() API. Requires a secure context (HTTPS or localhost); no network request is made.</p>
+ </ToolShell>
+}
+function UrlInspectorTool(){
+ const [raw,setRaw]=useState("https://example.com/products?category=books&page=2#reviews"),[key,setKey]=useState(""),[value,setValue]=useState(""),[error,setError]=useState("");
+ const parsed=useMemo(()=>{try{return {url:new URL(raw),error:""}}catch(e){return {url:null,error:"Enter a complete, valid URL including https://"}}},[raw]);
+ function updateParam(k,v){if(!parsed.url||!k.trim())return;const u=new URL(parsed.url);u.searchParams.set(k,v);setRaw(u.toString());setKey("");setValue("");setError("")}
+ function removeParam(k){if(!parsed.url)return;const u=new URL(parsed.url);u.searchParams.delete(k);setRaw(u.toString())}
+ const u=parsed.url,parts=u?[["Protocol",u.protocol],["Hostname",u.hostname],["Port",u.port||"(default)"],["Pathname",u.pathname],["Username",u.username||"(none)"],["Hash",u.hash||"(none)"],["Origin",u.origin]]:[];
+ return <ToolShell title="URL Inspector & Builder" subtitle="Inspect URL components, decode query parameters and build updated URLs without sending network requests." value={u?u.toString():""}>
+  <div className="generator-fields"><label className="action-field full-width">URL<input value={raw} onChange={e=>{setRaw(e.target.value);setError("")}} placeholder="https://example.com/path?key=value"/></label></div>
+  {parsed.error&&<div className="alert error-box" style={{margin:16}}>{parsed.error}</div>}
+  {u&&<><div className="url-parts-grid">{parts.map(([label,val])=><div className="url-part" key={label}><span>{label}</span><code>{val}</code></div>)}</div>
+  <Panel label="QUERY PARAMETERS"><div className="url-query-list">{[...u.searchParams.entries()].length?[...u.searchParams.entries()].map(([k,v],i)=><div className="url-query-row" key={i}><code>{k}</code><span>{v}</span><button className="text-btn" onClick={()=>removeParam(k)}><Trash2 size={13}/> Remove</button></div>):<p className="data-note">This URL has no query parameters.</p>}</div></Panel>
+  <div className="generator-fields"><label className="action-field">PARAMETER NAME<input value={key} onChange={e=>setKey(e.target.value)} placeholder="sort"/></label><label className="action-field">PARAMETER VALUE<input value={value} onChange={e=>setValue(e.target.value)} placeholder="newest"/></label></div>
+  <div className="sample-toolbar" style={{padding:14}}><button className="primary" disabled={!key.trim()} onClick={()=>updateParam(key,value)}>Add / update parameter <Link2 size={14}/></button><button className="text-btn" onClick={()=>{const clean=new URL(u);clean.search="";setRaw(clean.toString())}}>Clear all parameters</button></div>
+  <Panel label="UPDATED URL"><pre className="code">{u.toString()}</pre></Panel></>}
+  <p className="data-note" style={{padding:"0 16px 14px"}}>URL parsing is local. Query values are decoded for display and safely re-encoded when updated. No request is sent to the URL.</p>
+ </ToolShell>
+}
+
 function App(){
   const initialTool=getToolFromPath();
   const [active,setActive]=useState(initialTool||"json");
@@ -1331,7 +1391,7 @@ function App(){
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>}[active]||<AppIconStudio/>;
+  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">
