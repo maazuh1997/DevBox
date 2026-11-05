@@ -538,23 +538,25 @@ function HttpClientWorkbench(){
   const [history,setHistory]=useState([]);
 
   const buildUrl=()=>{
-    try{
-      const u=new URL(url);
-      params.filter(p=>p.key.trim()).forEach(p=>u.searchParams.set(p.key,p.value));
-      return u.toString();
-    }catch(e){return url}
+    const u=new URL(url);
+    if(!["http:","https:"].includes(u.protocol))throw new Error("Only HTTP and HTTPS URLs are supported.");
+    if(u.username||u.password)throw new Error("Remove credentials from the URL and use the Authorization tab instead.");
+    params.filter(p=>p.key.trim()).forEach(p=>u.searchParams.set(p.key,p.value));
+    return u.toString();
   };
 
   const send=async()=>{
     setLoading(true);setError("");setResponse(null);
     const started=performance.now();
+    const controller=new AbortController();
+    const timeoutId=setTimeout(()=>controller.abort(),20000);
     try{
       const finalUrl=buildUrl();
       const hs={};
       headers.filter(h=>h.key.trim()).forEach(h=>hs[h.key]=h.value);
       if(auth==="Bearer"&&token)hs.Authorization=`Bearer ${token}`;
       if(auth==="Basic"&&token)hs.Authorization=`Basic ${btoa(token)}`;
-      const opts={method,headers:hs};
+      const opts={method,headers:hs,signal:controller.signal};
       if(!["GET","HEAD"].includes(method)&&body){
         opts.body=bodyType==="JSON"?body:body;
         if(bodyType==="JSON"&&!Object.keys(hs).some(k=>k.toLowerCase()==="content-type"))hs["Content-Type"]="application/json";
@@ -567,8 +569,8 @@ function HttpClientWorkbench(){
       setResponse({status:res.status,statusText:res.statusText,ok:res.ok,time:duration,size:text.length,headers:[...res.headers.entries()],text,parsed});
       setHistory(h=>[item,...h.filter(x=>!(x.method===item.method&&x.url===item.url))].slice(0,10));
     }catch(e){
-      setError(e.message||"Request failed. This request may be blocked by CORS.");
-    }finally{setLoading(false)}
+      setError(e.name==="AbortError"?"Request timed out after 20 seconds.":e.message||"Request failed. This request may be blocked by CORS.");
+    }finally{clearTimeout(timeoutId);setLoading(false)}
   };
 
   const loadHistory=item=>{
