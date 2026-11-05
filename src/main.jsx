@@ -30,10 +30,15 @@ const initialJson = `{
   "active": true
 }`;
 
-function copyText(text, setCopied){
-  navigator.clipboard?.writeText(text);
-  setCopied(true);
-  setTimeout(()=>setCopied(false), 1200);
+async function copyText(text, setCopied){
+  try {
+    if (!navigator.clipboard?.writeText) throw new Error("Clipboard unavailable");
+    await navigator.clipboard.writeText(String(text));
+    setCopied(true);
+    setTimeout(()=>setCopied(false), 1200);
+  } catch {
+    setCopied(false);
+  }
 }
 
 function downloadText(name, text){
