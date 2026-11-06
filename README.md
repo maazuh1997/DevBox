@@ -45,7 +45,10 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Color Converter
 
 ### Assets, web & documentation
-- App Icon Studio
+- App Icon Studio (Android, iOS and web icon packs)
+- Favicon & Web Icon Pack (multi-size PNGs and web manifest)
+- Social Preview Studio (Open Graph / social sharing artwork)
+- CSS Gradient Studio (linear and radial gradient builder)
 - Image Compressor
 - SVG Optimizer
 - Base64 File Encoder
