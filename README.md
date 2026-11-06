@@ -55,6 +55,8 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Device Mockup Studio (phone, tablet and browser screenshot frames)
 - Image Background Keyer (local solid-color transparency tool)
 - Typography Pairing Studio (font stacks and CSS type tokens)
+- SVG Illustration Builder (editable vector shapes and SVG export)
+- CSS Border Radius Studio (independent corner controls and CSS export)
 - Image Compressor
 - SVG Optimizer
 - Base64 File Encoder
