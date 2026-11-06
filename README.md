@@ -52,6 +52,9 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Image Crop & Resize (social, app and web aspect-ratio presets)
 - Image Palette Extractor (dominant colors and CSS design tokens)
 - CSS Shadow Studio (live box-shadow composer)
+- Device Mockup Studio (phone, tablet and browser screenshot frames)
+- Image Background Keyer (local solid-color transparency tool)
+- Typography Pairing Studio (font stacks and CSS type tokens)
 - Image Compressor
 - SVG Optimizer
 - Base64 File Encoder
