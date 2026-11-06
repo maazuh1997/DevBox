@@ -51,6 +51,9 @@ const tools = [
 ,{id:"graphql-workbench",name:"GraphQL Workbench",desc:"Send GraphQL queries and mutations with variables, custom headers and response inspection",icon:Braces,category:"API & Backend"},
 {id:"websocket-client",name:"WebSocket Client",desc:"Connect to WebSocket endpoints, exchange messages and inspect connection events",icon:Globe2,category:"API & Backend"}
 
+,{id:"dockerfile-builder",name:"Dockerfile Builder",desc:"Generate hardened multi-stage Dockerfiles for Node.js, Python and static web applications",icon:Database,category:"DevOps"},
+{id:"database-schema",name:"Database Schema Designer",desc:"Design relational tables and generate dialect-aware SQL DDL with constraints",icon:Database,category:"Data & Database"}
+
 ];
 
 
@@ -427,7 +430,7 @@ const legacyToolAliases = {
   "code-formatter":"code-formatter", "hash-hmac":"hash-hmac", "headers-inspector":"headers-inspector",
   "diff-merge":"diff-merge", "env-workbench":"env-workbench"
 ,
-  "graphql-workbench":"graphql-workbench", "websocket-client":"websocket-client",
+  "graphql-workbench":"graphql-workbench", "dockerfile-builder":"dockerfile-builder", "database-schema":"database-schema", "websocket-client":"websocket-client",
   "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector", "webhook-sender":"webhook-sender", "api-mock-builder":"api-mock-builder"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||(tools.some(tool=>tool.id===id)?id:null)}
@@ -1668,6 +1671,84 @@ function WebSocketClient(){
   </ToolShell>
 }
 
+
+function DockerfileBuilder(){
+ const [runtime,setRuntime]=useState("node"),[version,setVersion]=useState("22"),[port,setPort]=useState("3000"),[entry,setEntry]=useState("server.js"),[install,setInstall]=useState("npm ci"),[build,setBuild]=useState("npm run build"),[multi,setMulti]=useState(true),[nonRoot,setNonRoot]=useState(true),[appDir,setAppDir]=useState("/app");
+ const node=runtime==="node",python=runtime==="python",validPort=/^\d{1,5}$/.test(port)&&Number(port)>=1&&Number(port)<=65535;
+ const output=useMemo(()=>{
+  const a=[];
+  if(node){
+   if(multi)a.push("FROM node:"+version+"-alpine AS build","WORKDIR "+appDir,"COPY package*.json ./","RUN "+install,"COPY . .","RUN "+build,"FROM node:"+version+"-alpine AS production","ENV NODE_ENV=production","WORKDIR "+appDir,"COPY package*.json ./","RUN "+install+" --omit=dev","COPY --from=build "+appDir+"/dist ./dist");
+   else a.push("FROM node:"+version+"-alpine","WORKDIR "+appDir,"COPY package*.json ./","RUN "+install,"COPY . .","ENV NODE_ENV=production");
+   if(nonRoot)a.push("USER node");
+   if(validPort)a.push("EXPOSE "+Number(port));
+   a.push('CMD ["node", "'+entry.replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"]');
+  }else if(python){
+   a.push("FROM python:"+version+"-slim","ENV PYTHONDONTWRITEBYTECODE=1 PYTHONUNBUFFERED=1","WORKDIR "+appDir,"COPY requirements*.txt ./","RUN pip install --no-cache-dir -r requirements.txt","COPY . .");
+   if(nonRoot)a.push("RUN useradd --create-home appuser && chown -R appuser:appuser "+appDir,"USER appuser");
+   if(validPort)a.push("EXPOSE "+Number(port));
+   a.push('CMD ["python", "'+entry.replace(/\\/g,"\\\\").replace(/"/g,'\\"')+'"]');
+  }else a.push("FROM nginx:alpine AS production","COPY dist/ /usr/share/nginx/html/","EXPOSE 80");
+  return a.join("\n")+"\n";
+ },[runtime,version,port,entry,install,build,multi,nonRoot,appDir,node,python,validPort]);
+ return <ToolShell title="Dockerfile Builder" subtitle="Generate configurable container recipes with production-oriented defaults and an optional multi-stage Node build." value={output}>
+  <div className="advanced-controls">
+   <label className="action-field"><span>APPLICATION TYPE</span><select value={runtime} onChange={e=>setRuntime(e.target.value)}><option value="node">Node.js</option><option value="python">Python</option><option value="static">Static frontend (Nginx)</option></select></label>
+   {runtime!=="static"&&<label className="action-field"><span>RUNTIME VERSION</span><select value={version} onChange={e=>setVersion(e.target.value)}>{(node?["24","22","20"]:["3.13","3.12","3.11"]).map(v=><option key={v}>{v}</option>)}</select></label>}
+   <ActionField label="WORKING DIRECTORY" value={appDir} onChange={setAppDir}/>
+   <ActionField label="EXPOSED PORT" value={port} onChange={setPort} type="number"/>
+  </div>
+  {node&&<div className="advanced-controls"><ActionField label="INSTALL COMMAND" value={install} onChange={setInstall}/><ActionField label="BUILD COMMAND" value={build} onChange={setBuild}/><ActionField label="START FILE" value={entry} onChange={setEntry}/></div>}
+  {python&&<ActionField label="PYTHON ENTRY FILE" value={entry} onChange={setEntry}/>}
+  <div className="stack-picker">{node&&<label><input type="checkbox" checked={multi} onChange={e=>setMulti(e.target.checked)}/> Multi-stage production build</label>}<label><input type="checkbox" checked={nonRoot} onChange={e=>setNonRoot(e.target.checked)}/> Run as non-root user where supported</label></div>
+  {!validPort&&<div className="inline-error" role="alert">Port must be between 1 and 65535.</div>}
+  <Panel label="GENERATED DOCKERFILE" status={runtime.toUpperCase()}><pre className="formatter-output">{output}</pre></Panel>
+  <div className="advanced-footer"><button className="primary" onClick={()=>downloadText("Dockerfile",output)}>Download Dockerfile <Download size={14}/></button></div>
+  <p className="data-note">Review commands, lockfiles, entry points, permissions and exposed ports. Add a .dockerignore and scan the final image before production. Static frontend output assumes a dist/ build directory. This generator does not build or run containers.</p>
+ </ToolShell>
+}
+
+function DatabaseSchemaDesigner(){
+ const [dialect,setDialect]=useState("postgres"),[tables,setTables]=useState([{id:"users",name:"users",columns:[{id:"uid",name:"id",type:"integer",pk:true,nullable:false,unique:false,default:""},{id:"email",name:"email",type:"varchar",length:"255",pk:false,nullable:false,unique:true,default:""},{id:"name",name:"name",type:"varchar",length:"120",pk:false,nullable:false,unique:false,default:""},{id:"created",name:"created_at",type:"timestamp",pk:false,nullable:false,unique:false,default:"CURRENT_TIMESTAMP"}]}]),[selected,setSelected]=useState("users"),[tab,setTab]=useState("sql");
+ const q=dialect==="mysql"?String.fromCharCode(96):'"';
+ const ident=v=>q+String(v).replace(/[^A-Za-z0-9_]/g,"")+q;
+ const sqlType=c=>c.type==="varchar"?"VARCHAR("+Math.max(1,Math.min(65535,Number(c.length)||255))+")":c.type==="integer"?(dialect==="mysql"?"INT":"INTEGER"):c.type==="boolean"?(dialect==="sqlite"?"INTEGER":"BOOLEAN"):c.type==="decimal"?"DECIMAL(12,2)":c.type==="date"?"DATE":c.type==="timestamp"?(dialect==="mysql"?"DATETIME":"TIMESTAMP"):"TEXT";
+ const valid=v=>/^[A-Za-z_][A-Za-z0-9_]*$/.test(v);
+ const issues=[];
+ const seen=new Set();
+ tables.forEach(t=>{if(!valid(t.name))issues.push("Invalid table name: "+t.name);if(seen.has(t.name.toLowerCase()))issues.push("Duplicate table: "+t.name);seen.add(t.name.toLowerCase());const cols=new Set();let pk=0;t.columns.forEach(c=>{if(!valid(c.name))issues.push(t.name+": invalid column "+c.name);if(cols.has(c.name.toLowerCase()))issues.push(t.name+": duplicate column "+c.name);cols.add(c.name.toLowerCase());if(c.pk)pk++});if(!t.columns.length)issues.push(t.name+": add at least one column");if(pk>1)issues.push(t.name+": only one primary key is supported")});
+ const sql=useMemo(()=>tables.map(t=>"CREATE TABLE "+ident(t.name)+" (\n"+t.columns.map(c=>{let line="  "+ident(c.name)+" "+sqlType(c);if(c.pk)line+=" PRIMARY KEY"+(dialect==="mysql"&&c.type==="integer"?" AUTO_INCREMENT":dialect==="sqlite"&&c.type==="integer"?" AUTOINCREMENT":"");if(c.unique&&!c.pk)line+=" UNIQUE";if(!c.nullable&&!c.pk)line+=" NOT NULL";if(c.default.trim()&&!c.pk){const d=c.default.trim().replace(/[\r\n]/g,"");line+=" DEFAULT "+(d==="CURRENT_TIMESTAMP"||/^-?\d+(\.\d+)?$/.test(d)?d:"'"+d.replace(/'/g,"''")+"'")}return line}).join(",\n")+"\n);").join("\n\n")+"\n",[tables,dialect]);
+ const current=tables.find(t=>t.id===selected)||tables[0];
+ const updateTable=(id,patch)=>setTables(old=>old.map(t=>t.id===id?{...t,...patch}:t));
+ const updateCol=(tid,cid,patch)=>setTables(old=>old.map(t=>t.id===tid?{...t,columns:t.columns.map(c=>c.id===cid?{...c,...patch}:c)}:t));
+ const addTable=()=>{const id="table-"+uuid();setTables(old=>[...old,{id,name:"new_table",columns:[{id:id+"-id",name:"id",type:"integer",pk:true,nullable:false,unique:false,default:""}]}]);setSelected(id)};
+ const addColumn=()=>current&&updateTable(current.id,{columns:[...current.columns,{id:uuid(),name:"new_column",type:"varchar",length:"255",pk:false,nullable:true,unique:false,default:""}]});
+ return <ToolShell title="Database Schema Designer" subtitle="Model relational tables and generate SQL DDL for PostgreSQL, MySQL or SQLite.">
+  <div className="advanced-controls"><label className="action-field"><span>SQL DIALECT</span><select value={dialect} onChange={e=>setDialect(e.target.value)}><option value="postgres">PostgreSQL</option><option value="mysql">MySQL</option><option value="sqlite">SQLite</option></select></label><button className="primary" onClick={addTable}>+ Add table</button><button className="text-btn" onClick={addColumn} disabled={!current}>+ Add column</button></div>
+  <div className="sample-category-row">{tables.map(t=><button key={t.id} className={selected===t.id?"active":""} onClick={()=>setSelected(t.id)}>{t.name}</button>)}</div>
+  {current&&<div className="env-workbench">
+   <div className="advanced-controls"><ActionField label="TABLE NAME" value={current.name} onChange={v=>updateTable(current.id,{name:v})}/><button className="text-btn" disabled={tables.length===1} onClick={()=>{setTables(old=>old.filter(t=>t.id!==current.id));setSelected(tables.find(t=>t.id!==current.id)?.id||"")}}>Delete table</button></div>
+   <div className="env-table"><div className="pane-head"><strong>Columns</strong><span>{current.columns.length} fields</span></div>
+    {current.columns.map(c=><div key={c.id} style={{display:"grid",gridTemplateColumns:"minmax(100px,1fr) minmax(90px,.8fr) 65px auto auto auto 28px",gap:7,alignItems:"center",padding:"9px 10px",borderBottom:"1px solid var(--border, #ddd)"}}>
+     <input aria-label="Column name" value={c.name} onChange={e=>updateCol(current.id,c.id,{name:e.target.value})}/>
+     <select aria-label="Column type" value={c.type} onChange={e=>updateCol(current.id,c.id,{type:e.target.value})}>{["integer","varchar","text","boolean","decimal","date","timestamp"].map(x=><option key={x}>{x}</option>)}</select>
+     {c.type==="varchar"?<input aria-label="Length" type="number" min="1" max="65535" value={c.length||255} onChange={e=>updateCol(current.id,c.id,{length:e.target.value})}/>:<span/>}
+     <label><input type="checkbox" checked={c.pk} onChange={e=>updateCol(current.id,c.id,{pk:e.target.checked,nullable:e.target.checked?false:c.nullable})}/> PK</label>
+     <label><input type="checkbox" checked={!c.nullable} disabled={c.pk} onChange={e=>updateCol(current.id,c.id,{nullable:!e.target.checked})}/> Required</label>
+     <label><input type="checkbox" checked={c.unique} onChange={e=>updateCol(current.id,c.id,{unique:e.target.checked})}/> Unique</label>
+     <button className="text-btn" aria-label={"Remove "+c.name} onClick={()=>updateTable(current.id,{columns:current.columns.filter(x=>x.id!==c.id)})}>×</button>
+     <input aria-label="Default value" placeholder="Default value" value={c.default} onChange={e=>updateCol(current.id,c.id,{default:e.target.value})} style={{gridColumn:"1 / -2"}}/>
+    </div>)}
+   </div>
+  </div>}
+  <div className="sample-category-row"><button className={tab==="sql"?"active":""} onClick={()=>setTab("sql")}>SQL DDL</button><button className={tab==="overview"?"active":""} onClick={()=>setTab("overview")}>Schema overview</button></div>
+  {tab==="sql"?<Panel label="GENERATED SQL" status={dialect.toUpperCase()}><pre className="formatter-output">{sql}</pre></Panel>:<Panel label="TABLE OVERVIEW"><div className="headers-results">{tables.map(t=><div className="header-row" key={t.id}><strong>{t.name}</strong><span>{t.columns.map(c=>c.name+" · "+sqlType(c)+(c.pk?" · PK":"")).join("\n")}</span></div>)}</div></Panel>}
+  {issues.length>0&&<div className="inline-error" role="alert">{issues.join(" · ")}</div>}
+  <div className="advanced-footer"><button className="primary" disabled={issues.length>0} onClick={()=>downloadText("schema.sql",sql)}>Download schema.sql <Download size={14}/></button></div>
+  <p className="data-note">DDL generator only; it does not connect to or execute against a database. Review identity behavior, defaults, indexes, foreign keys and migration strategy before applying generated SQL.</p>
+ </ToolShell>
+}
+
 class AppErrorBoundary extends React.Component{
   constructor(props){super(props);this.state={error:null,resetting:false};}
   static getDerivedStateFromError(error){return {error};}
@@ -1806,7 +1887,7 @@ function App(){
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"graphql-workbench":<GraphqlWorkbench/>,"websocket-client":<WebSocketClient/>, "app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"curl-builder":<CurlWorkbench/>,"json-diff":<JsonDiffTool/>,"jwt-inspector":<JwtInspector/>,"regex-workbench":<RegexWorkbench/>,"timestamp-converter":<TimestampTool/>,"color-converter":<ColorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
+  const content={"dockerfile-builder":<DockerfileBuilder/>,"database-schema":<DatabaseSchemaDesigner/>,"graphql-workbench":<GraphqlWorkbench/>,"websocket-client":<WebSocketClient/>, "app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"curl-builder":<CurlWorkbench/>,"json-diff":<JsonDiffTool/>,"jwt-inspector":<JwtInspector/>,"regex-workbench":<RegexWorkbench/>,"timestamp-converter":<TimestampTool/>,"color-converter":<ColorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">
