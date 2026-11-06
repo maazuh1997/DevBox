@@ -49,6 +49,9 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Favicon & Web Icon Pack (multi-size PNGs and web manifest)
 - Social Preview Studio (Open Graph / social sharing artwork)
 - CSS Gradient Studio (linear and radial gradient builder)
+- Image Crop & Resize (social, app and web aspect-ratio presets)
+- Image Palette Extractor (dominant colors and CSS design tokens)
+- CSS Shadow Studio (live box-shadow composer)
 - Image Compressor
 - SVG Optimizer
 - Base64 File Encoder
