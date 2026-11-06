@@ -10,6 +10,8 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - API Mock Response Builder
 - OpenAPI Workbench
 - HTTP Headers Inspector
+- GraphQL Workbench
+- WebSocket Client
 - URL Inspector & Builder
 - cURL Builder
 
