@@ -164,7 +164,7 @@ function JsonTool(){
       return {ok:false,value:e.message,line};
     }
   },[input,mode,sort]);
-  useEffect(()=>writeStorage("devbox-json",input),[input]);
+  useEffect(()=>{writeStorage("devbox-json",input)},[input]);
   useEffect(()=>{if(!input.trim())return;const timer=setTimeout(()=>window.__devboxAddHistory?.({toolId:"json",tool:"JSON Formatter",preview:input.slice(0,100)}),1000);return()=>clearTimeout(timer)},[input]);
   function loadFile(e){
     const file=e.target.files?.[0];
@@ -580,7 +580,7 @@ function HashWorkbench(){
     const buf=await crypto.subtle.digest(algo,data);
     setOutput([...new Uint8Array(buf)].map(b=>b.toString(16).padStart(2,"0")).join(""));
   };
-  useEffect(()=>{run()},[input,algo]);
+  useEffect(()=>{void run()},[input,algo]);
   return <ToolShell title="Hash Generator" subtitle="Generate cryptographic hashes locally in your browser using the Web Crypto API.">
     <div className="workbench single-workbench">
       <div className="control-row"><label>Algorithm<select value={algo} onChange={e=>setAlgo(e.target.value)}><option>SHA-256</option><option>SHA-384</option><option>SHA-512</option><option>SHA-1</option></select></label><span className="local-badge">LOCAL PROCESSING</span></div>
@@ -1259,7 +1259,7 @@ function HashHmacWorkbench(){
       setOutput(hex(digest));setHmac(hex(sig));
     }catch(e){setOutput(e.message);setHmac("")}finally{setBusy(false)}
   };
-  useEffect(()=>{run()},[algorithm]);
+  useEffect(()=>{void run()},[algorithm]);
   return <ToolShell title="Hash & HMAC" subtitle="Generate cryptographic hashes and HMAC signatures with the browser Web Crypto API.">
     <div className="hash-workbench">
       <div className="formatter-toolbar"><label>Algorithm<select value={algorithm} onChange={e=>setAlgorithm(e.target.value)}><option>SHA-256</option><option>SHA-384</option><option>SHA-512</option></select></label><button className="primary" onClick={run}>{busy?"Generating…":"Generate"}</button></div>
@@ -1673,10 +1673,10 @@ function App(){
     window.addEventListener("popstate",onPop);
     return()=>window.removeEventListener("popstate",onPop);
   },[]);
-  useEffect(()=>writeStorage("devbox-history",JSON.stringify(historyItems.slice(0,40))),[historyItems]);
+  useEffect(()=>{writeStorage("devbox-history",JSON.stringify(historyItems.slice(0,40)))},[historyItems]);
   const addHistory=item=>{const toolId=canonicalToolId(item.toolId)||item.toolId;setHistoryItems(prev=>[{...item,toolId,id:uuid(),createdAt:Date.now()},...prev.filter(x=>x.toolId!==toolId)].slice(0,40));};
   useEffect(()=>{window.__devboxAddHistory=addHistory;return()=>delete window.__devboxAddHistory},[]);
-  useEffect(()=>writeStorage("devbox-favorites",JSON.stringify(favorites)),[favorites]);
+  useEffect(()=>{writeStorage("devbox-favorites",JSON.stringify(favorites))},[favorites]);
   useEffect(()=>{
     const handler=e=>{
       if((e.metaKey||e.ctrlKey)&&e.key.toLowerCase()==="k"){e.preventDefault();document.querySelector(".top-search input")?.focus()}
