@@ -19,6 +19,7 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Data Transform Studio (JSON, CSV and YAML)
 - SQL Workbench
 - SQL Seed Data Generator
+- Database Schema Designer
 - JSON Schema Generator
 - Mock Data Studio
 - JSON Diff
@@ -30,6 +31,7 @@ A browser-first developer toolkit built with React and Vite. DevBox provides pra
 - Environment File Builder
 - .env Inspector
 - Docker Compose Builder
+- Dockerfile Builder
 - .gitignore Builder
 
 ### Code generation & developer workflow
