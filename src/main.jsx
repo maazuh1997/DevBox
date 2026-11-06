@@ -48,6 +48,9 @@ const tools = [
 {id:"headers-inspector",name:"HTTP Headers Inspector",desc:"Inspect response headers and common security headers",icon:ShieldCheck,category:"API & Backend"},
 {id:"diff-merge",name:"Diff & Merge",desc:"Compare and merge text or JSON documents",icon:Binary,category:"Developer Workflow"},
 {id:"env-workbench",name:".env Inspector",desc:"Validate environment variables and mask sensitive values",icon:Lock,category:"Security & Config"}
+,{id:"graphql-workbench",name:"GraphQL Workbench",desc:"Send GraphQL queries and mutations with variables, custom headers and response inspection",icon:Braces,category:"API & Backend"},
+{id:"websocket-client",name:"WebSocket Client",desc:"Connect to WebSocket endpoints, exchange messages and inspect connection events",icon:Globe2,category:"API & Backend"}
+
 ];
 
 
@@ -424,6 +427,7 @@ const legacyToolAliases = {
   "code-formatter":"code-formatter", "hash-hmac":"hash-hmac", "headers-inspector":"headers-inspector",
   "diff-merge":"diff-merge", "env-workbench":"env-workbench"
 ,
+  "graphql-workbench":"graphql-workbench", "websocket-client":"websocket-client",
   "pwa-manifest":"pwa-manifest", "robots-sitemap":"robots-sitemap", "github-actions":"github-actions", "nginx-builder":"nginx-builder", "image-compressor":"image-compressor", "svg-optimizer":"svg-optimizer", "sql-seed":"sql-seed", "base64-file":"base64-file", "uuid-batch":"uuid-batch", "url-inspector":"url-inspector", "webhook-sender":"webhook-sender", "api-mock-builder":"api-mock-builder"
 };
 function canonicalToolId(id){return legacyToolAliases[id]||(tools.some(tool=>tool.id===id)?id:null)}
@@ -1565,6 +1569,105 @@ function ApiMockBuilder(){
  </ToolShell>
 }
 
+
+function GraphqlWorkbench(){
+  const [endpoint,setEndpoint]=useState("https://countries.trevorblades.com/");
+  const [query,setQuery]=useState('query Countries {\n  countries {\n    code\n    name\n    capital\n  }\n}');
+  const [variables,setVariables]=useState("{}");
+  const [headers,setHeaders]=useState('{\n  "Content-Type": "application/json"\n}');
+  const [result,setResult]=useState("");
+  const [meta,setMeta]=useState("");
+  const [busy,setBusy]=useState(false);
+  const [error,setError]=useState("");
+  async function execute(){
+    let target,vars,extra;
+    try{
+      target=new URL(endpoint);
+      if(!["http:","https:"].includes(target.protocol))throw new Error("Use an absolute HTTP or HTTPS endpoint.");
+      if(target.username||target.password)throw new Error("Credentials in endpoint URLs are not allowed. Use headers instead.");
+      vars=JSON.parse(variables||"{}");
+      if(!vars||typeof vars!=="object"||Array.isArray(vars))throw new Error("Variables must be a JSON object.");
+      extra=JSON.parse(headers||"{}");
+      if(!extra||typeof extra!=="object"||Array.isArray(extra))throw new Error("Headers must be a JSON object.");
+      if(Object.keys(extra).some(k=>/[\r\n]/.test(k)||/[\r\n]/.test(String(extra[k]))))throw new Error("Header names and values cannot contain line breaks.");
+    }catch(e){setError(e.message||"Check the endpoint, variables and headers.");return}
+    const controller=new AbortController(),timer=setTimeout(()=>controller.abort(),25000),started=performance.now();
+    setBusy(true);setError("");setMeta("Sending request…");setResult("");
+    try{
+      const response=await fetch(target.href,{method:"POST",headers:{"Content-Type":"application/json",...extra},body:JSON.stringify({query,variables:vars}),signal:controller.signal});
+      const text=await response.text();
+      let formatted=text;
+      try{formatted=JSON.stringify(JSON.parse(text),null,2)}catch{}
+      setResult(formatted);
+      setMeta(response.status+" "+response.statusText+" · "+Math.round(performance.now()-started)+" ms");
+      if(!response.ok)setError("The server returned an HTTP error. Review the response body for details.");
+      window.__devboxAddHistory?.({toolId:"graphql-workbench",tool:"GraphQL Workbench",preview:target.origin+target.pathname});
+    }catch(e){
+      setError(e.name==="AbortError"?"Request timed out after 25 seconds.":"Request failed. The endpoint may be unreachable or may block this origin through CORS. "+(e.message||""));
+      setMeta("Request failed");
+    }finally{clearTimeout(timer);setBusy(false)}
+  }
+  return <ToolShell title="GraphQL Workbench" subtitle="Execute GraphQL operations with JSON variables and custom request headers. Requests are sent directly from this browser." value={result} onClear={()=>{setResult("");setMeta("");setError("")}}>
+    <div className="advanced-controls"><ActionField label="GRAPHQL ENDPOINT" value={endpoint} onChange={setEndpoint} placeholder="https://api.example.com/graphql"/><button className="primary" disabled={busy||!query.trim()} onClick={execute}>{busy?"Sending…":"Run operation"}</button></div>
+    <div className="diff-editors">
+      <div className="workbench-pane"><div className="pane-head"><strong>Query / Mutation</strong><span>GraphQL</span></div><textarea value={query} onChange={e=>setQuery(e.target.value)} spellCheck="false" placeholder="query { viewer { id } }"/></div>
+      <div className="workbench-pane"><div className="pane-head"><strong>Variables</strong><span>JSON object</span></div><textarea value={variables} onChange={e=>setVariables(e.target.value)} spellCheck="false" placeholder='{"id":"123"}'/></div>
+    </div>
+    <div className="workbench-pane"><div className="pane-head"><strong>Request headers</strong><span>JSON object</span></div><textarea value={headers} onChange={e=>setHeaders(e.target.value)} spellCheck="false" placeholder='{"Authorization":"Bearer …"}'/></div>
+    {error&&<div className="inline-error" role="alert">{error}</div>}
+    <Panel label="RESPONSE" status={meta} statusGood={!!meta&&!error&&meta!=="Sending request…"}><pre className="formatter-output">{result||"Run an operation to inspect the GraphQL response."}</pre></Panel>
+    <p className="data-note">Browser-native fetch only. Cross-origin endpoints must allow this site's origin through CORS. Authentication headers are sent to the endpoint you specify; do not use untrusted URLs.</p>
+  </ToolShell>
+}
+
+function WebSocketClient(){
+  const [url,setUrl]=useState("wss://echo.websocket.events");
+  const [message,setMessage]=useState("Hello from DevBox");
+  const [socket,setSocket]=useState(null);
+  const [state,setState]=useState("Disconnected");
+  const [events,setEvents]=useState([]);
+  const [error,setError]=useState("");
+  const connected=!!socket&&socket.readyState===WebSocket.OPEN;
+  function addEvent(type,data){
+    setEvents(items=>[{id:uuid(),time:new Date().toLocaleTimeString(),type,data:String(data??"").slice(0,12000)},...items].slice(0,100));
+  }
+  function connect(){
+    let target;
+    try{
+      target=new URL(url);
+      if(!["ws:","wss:"].includes(target.protocol))throw new Error("Use a ws:// or wss:// endpoint.");
+      if(target.username||target.password)throw new Error("Credentials in WebSocket URLs are not supported. Use a server designed for your authentication flow.");
+    }catch(e){setError(e.message);return}
+    if(typeof WebSocket==="undefined"){setError("WebSocket is not supported in this browser.");return}
+    setError("");setState("Connecting…");setEvents([]);
+    try{
+      const ws=new WebSocket(target.href);
+      ws.addEventListener("open",()=>{setState("Connected");addEvent("Connected",target.href)});
+      ws.addEventListener("message",event=>addEvent("Received",typeof event.data==="string"?event.data:"Binary message received"));
+      ws.addEventListener("error",()=>{setError("The WebSocket connection reported an error. Check the endpoint, TLS certificate and server policy.");addEvent("Error","Connection error")});
+      ws.addEventListener("close",event=>{setState("Disconnected");addEvent("Closed","Code "+event.code+(event.reason?" · "+event.reason:""))});
+      setSocket(ws);
+    }catch(e){setState("Disconnected");setError(e.message||"Could not create WebSocket connection.")}
+  }
+  function disconnect(){
+    if(socket&&socket.readyState<2){socket.close(1000,"Closed by user");addEvent("Closing","Close requested")}
+    setSocket(null);setState("Disconnected");
+  }
+  function send(){
+    if(!socket||socket.readyState!==WebSocket.OPEN){setError("Connect to a WebSocket server before sending.");return}
+    try{socket.send(message);addEvent("Sent",message);setError("")}catch(e){setError(e.message||"Message could not be sent.")}
+  }
+  useEffect(()=>()=>{if(socket&&socket.readyState<2)socket.close(1000,"DevBox tool closed")},[socket]);
+  return <ToolShell title="WebSocket Client" subtitle="Open a browser WebSocket connection, send text frames and inspect incoming messages and lifecycle events." onClear={()=>setEvents([])}>
+    <div className="advanced-controls"><ActionField label="WEBSOCKET URL" value={url} onChange={setUrl} placeholder="wss://example.com/socket"/><button className="primary" disabled={state==="Connecting…"||connected} onClick={connect}>Connect</button><button className="text-btn" disabled={!socket} onClick={disconnect}>Disconnect</button></div>
+    <div className="security-summary"><strong>Connection</strong><span>{state}</span></div>
+    <div className="inline-inputs"><input value={message} onChange={e=>setMessage(e.target.value)} onKeyDown={e=>{if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send()}}} placeholder="Message payload"/><button className="primary" disabled={!connected||!message} onClick={send}>Send message</button></div>
+    {error&&<div className="inline-error" role="alert">{error}</div>}
+    <Panel label="MESSAGE & EVENT LOG" status={events.length+" events"}><div className="headers-results">{events.length?events.map(item=><div className="header-row" key={item.id}><code>{item.time} · {item.type}</code><span>{item.data}</span></div>):<div className="history-empty">Connection events and messages will appear here.</div>}</div></Panel>
+    <div className="data-note">The browser WebSocket API does not support custom handshake headers. Use only trusted endpoints; the server receives every message you send. Connections close when you leave this tool.</div>
+  </ToolShell>
+}
+
 class AppErrorBoundary extends React.Component{
   constructor(props){super(props);this.state={error:null,resetting:false};}
   static getDerivedStateFromError(error){return {error};}
@@ -1703,7 +1806,7 @@ function App(){
     setActive(canonical);setView("workspace");setMobile(false);setQuery("");
     navigateTo(canonical);window.scrollTo({top:0,behavior:"smooth"});
   }
-  const content={"app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"curl-builder":<CurlWorkbench/>,"json-diff":<JsonDiffTool/>,"jwt-inspector":<JwtInspector/>,"regex-workbench":<RegexWorkbench/>,"timestamp-converter":<TimestampTool/>,"color-converter":<ColorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
+  const content={"graphql-workbench":<GraphqlWorkbench/>,"websocket-client":<WebSocketClient/>, "app-icon-studio":<AppIconStudio/>,"jwt-secret":<JwtSecretGenerator/>,"sample-files":<SampleFiles/>,"env-generator":<EnvGenerator/>,"docker-compose":<DockerComposeBuilder/>,"gitignore-builder":<GitignoreBuilder/>,"mock-data":<MockDataStudio/>,"api-scaffold":<ApiScaffold/>,"cron-builder":<CronStudio/>,"json-schema":<JsonSchemaGenerator/>,"http-client":<HttpClientWorkbench/>,"sql-workbench":<SqlWorkbench/>,"json-typescript":<JsonTypeGenerator/>,"openapi-workbench":<OpenApiWorkbench/>,"data-transform":<DataTransformWorkbench/>,"markdown-studio":<MarkdownStudio/>,"code-formatter":<CodeFormatterWorkbench/>,"hash-hmac":<HashHmacWorkbench/>,"headers-inspector":<HeadersInspector/>,"diff-merge":<DiffMergeWorkbench/>,"env-workbench":<EnvWorkbench/>,"pwa-manifest":<PwaManifestBuilder/>,"robots-sitemap":<RobotsSitemapBuilder/>,"github-actions":<GithubActionsBuilder/>,"nginx-builder":<NginxBuilder/>,"image-compressor":<ImageCompressor/>,"svg-optimizer":<SvgOptimizer/>,"sql-seed":<SqlSeedGenerator/>,"base64-file":<Base64FileTool/>,"uuid-batch":<UuidBatchTool/>,"url-inspector":<UrlInspectorTool/>,"curl-builder":<CurlWorkbench/>,"json-diff":<JsonDiffTool/>,"jwt-inspector":<JwtInspector/>,"regex-workbench":<RegexWorkbench/>,"timestamp-converter":<TimestampTool/>,"color-converter":<ColorTool/>,"webhook-sender":<WebhookSender/>,"api-mock-builder":<ApiMockBuilder/>}[active]||<AppIconStudio/>;
 
   return <div className="app">
     <header className="topbar">
